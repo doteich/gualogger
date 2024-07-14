@@ -1,6 +1,6 @@
 opcua:
   connection:
-    endpoint: 192.168.178.108
+    endpoint: 127.0.0.1
     port: 49320
     mode: "SignAndEncrypt"   # Possible Entries: 'None', 'Sign', 'SignAndEncrypt'
     policy: 'Basic256Sha256' # Possible Entries: 'None', 'Basic256', 'Basic256Sha256', 'Aes256Sha256RsaPss', 'Aes128Sha256RsaOaep'
