@@ -1,0 +1,21 @@
+opcua:
+  connection:
+    endpoint: 192.168.178.108
+    port: 49320
+    mode: "SignAndEncrypt"   # Possible Entries: 'None', 'Sign', 'SignAndEncrypt'
+    policy: 'Basic256Sha256' # Possible Entries: 'None', 'Basic256', 'Basic256Sha256', 'Aes256Sha256RsaPss', 'Aes128Sha256RsaOaep'
+    authentication:
+      type: 'None'           # Possible Entries: 'None', 'User&Password', 'Certificate'
+      credentials:           # Only necessary if type is 'User&Password'
+        username: ''
+        password: ''
+      certificate:           # Only necessary if type is 'Certificate'
+        certificate_path: '' # absolute path to certificate file pem encoded
+        private_key_path: '' # absolute path to private key file pem encoded
+      certificate:           # Only necessary if mode is 'Sign' or 'SignAndEncrypt'
+        auto_create: true    # if true, the application will create a self-signed cert on startup, external provided certs are ignored
+        certificate_path: '' # absolute path to certificate file used for signing/encryption pem encoded - 
+        private_key_path: '' # absolute path to private key file used for signing/encryption pem encoded
+  nodeids:                   # List of Node IDs
+exporters:                   # Work in Progress
+  timescale-db:
