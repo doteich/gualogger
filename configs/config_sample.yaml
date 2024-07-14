@@ -12,7 +12,7 @@ opcua:
       certificate:           # Only necessary if type is 'Certificate'
         certificate_path: '' # absolute path to certificate file pem encoded
         private_key_path: '' # absolute path to private key file pem encoded
-      certificate:           # Only necessary if mode is 'Sign' or 'SignAndEncrypt'
+    certificate:           # Only necessary if mode is 'Sign' or 'SignAndEncrypt'
         auto_create: true    # if true, the application will create a self-signed cert on startup, external provided certs are ignored
         certificate_path: '' # absolute path to certificate file used for signing/encryption pem encoded - 
         private_key_path: '' # absolute path to private key file used for signing/encryption pem encoded
