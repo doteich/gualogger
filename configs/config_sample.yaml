@@ -16,6 +16,10 @@ opcua:
         auto_create: true    # if true, the application will create a self-signed cert on startup, external provided certs are ignored
         certificate_path: '' # absolute path to certificate file used for signing/encryption pem encoded - 
         private_key_path: '' # absolute path to private key file used for signing/encryption pem encoded
-  nodeids:                   # List of Node IDs
+    retry_count: 10          # Number of Retries the the connection should retried to the server
+  subscription:
+    sub_interval: 10         # Subcription Interval in Seconds           
+    nodeids:                 # List of Node IDs
+      - i=2258
 exporters:                   # Work in Progress
   timescale-db:

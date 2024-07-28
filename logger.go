@@ -24,5 +24,4 @@ func InitLogger(lvl string) {
 
 	Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: sLvl}))
 
-	return
 }
