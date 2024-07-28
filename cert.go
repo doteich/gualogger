@@ -24,6 +24,7 @@ func CreateKeyPair() error {
 	_, err2 := os.Stat("./certs/key.pem")
 
 	if err1 == nil && err2 == nil {
+		Logger.Info("certificate and key already present - skipping creating")
 		return nil
 	}
 

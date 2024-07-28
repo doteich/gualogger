@@ -10,8 +10,13 @@ type Configuration struct {
 }
 
 type OpcConfig struct {
-	Nodeids    []string      `mapstructure:"nodeids"`
-	Connection OpcConnection `mapstructure:"connection"`
+	Connection   OpcConnection `mapstructure:"connection"`
+	Subscription Subscription  `mapstructure:"subscription"`
+}
+
+type Subscription struct {
+	Nodeids  []string `mapstructure:"nodeids"`
+	Interval int      `mapstructure:"sub_interval"`
 }
 
 type OpcConnection struct {
@@ -21,6 +26,7 @@ type OpcConnection struct {
 	Policy         string            `mapstructure:"policy"`
 	Authentication OpcAuthentication `mapstructure:"authentication"`
 	Certificate    OpcCerts          `mapstructure:"certificate"`
+	Retries        int               `mapstructure:"retry_count"`
 }
 
 type OpcAuthentication struct {
