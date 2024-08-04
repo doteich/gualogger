@@ -23,6 +23,9 @@ func init() {
 		Logger.Error(fmt.Sprintf("error while loading configuration: %s", err.Error()), "func", "init")
 		os.Exit(1)
 	}
+
+	conf.Exporters.setupPubHandlers()
+
 }
 
 func main() {

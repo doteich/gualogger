@@ -1,6 +1,8 @@
 package main
 
 import (
+	"gualogger/handlers"
+
 	"github.com/spf13/viper"
 )
 
@@ -48,6 +50,7 @@ type OpcCerts struct {
 }
 
 type Exporters struct {
+	TimeScaleDB handlers.TimeScaleDB `mapstructure:"timescale-db"`
 }
 
 func LoadConfig() (Configuration, error) {
