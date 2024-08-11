@@ -7,7 +7,10 @@ import (
 	"os"
 )
 
-var conf Configuration
+var (
+	conf Configuration
+	mgr  *ExportManager
+)
 
 func init() {
 
@@ -24,12 +27,13 @@ func init() {
 		os.Exit(1)
 	}
 
-	conf.Exporters.setupPubHandlers()
-
 }
 
 func main() {
 	ctx := context.Background()
+
+	mgr = NewManager(&conf.Exporters)
+	mgr.SetupPubHandlers(ctx)
 
 	conf.Opcua.InitSuperVisor(ctx)
 }
