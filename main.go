@@ -7,7 +7,10 @@ import (
 	"os"
 )
 
-var conf Configuration
+var (
+	conf Configuration
+	mgr  *ExportManager
+)
 
 func init() {
 
@@ -23,10 +26,14 @@ func init() {
 		Logger.Error(fmt.Sprintf("error while loading configuration: %s", err.Error()), "func", "init")
 		os.Exit(1)
 	}
+
 }
 
 func main() {
 	ctx := context.Background()
+
+	mgr = NewManager(&conf.Exporters)
+	mgr.SetupPubHandlers(ctx)
 
 	conf.Opcua.InitSuperVisor(ctx)
 }

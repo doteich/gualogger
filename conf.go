@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
+	"gualogger/handlers"
+
 	"github.com/spf13/viper"
 )
 
 type Configuration struct {
-	Opcua     OpcConfig `mapstructure:"opcua"`
-	Exporters Exporters `mapstructure:"exporters"`
+	Opcua     OpcConfig              `mapstructure:"opcua"`
+	ExpMap    map[string]interface{} `mapstructure:"exporters"`
+	Exporters Exporters              `mapstructure:"exporters"`
 }
 
 type OpcConfig struct {
@@ -48,6 +52,8 @@ type OpcCerts struct {
 }
 
 type Exporters struct {
+	RegisteredExporters []string
+	TimeScaleDB         handlers.TimeScaleDB `mapstructure:"timescale-db"`
 }
 
 func LoadConfig() (Configuration, error) {
@@ -55,7 +61,6 @@ func LoadConfig() (Configuration, error) {
 	var conf Configuration
 
 	v := viper.New()
-
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AddConfigPath("/etc/gopclogs")   // Linux FS
@@ -68,6 +73,13 @@ func LoadConfig() (Configuration, error) {
 
 	if err := v.Unmarshal(&conf); err != nil {
 		return conf, err
+	}
+
+	conf.Exporters.RegisteredExporters = make([]string, len(conf.ExpMap))
+
+	for e := range conf.ExpMap {
+		fmt.Println(e)
+		conf.Exporters.RegisteredExporters = append(conf.Exporters.RegisteredExporters, e)
 	}
 
 	return conf, nil
