@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"gualogger/handlers"
 )
 
@@ -32,8 +31,6 @@ func (m *ExportManager) RegisterExporters(e *Exporters) {
 // Setup exporter by calling the Initialize() function of each exporters interface
 // If the initialization of one exporter fails, the first error gets returned
 func (m *ExportManager) SetupPubHandlers(ctx context.Context) error {
-
-	fmt.Println(m)
 
 	for _, e := range m.exporters {
 		if err := e.Initialize(ctx); err != nil {
