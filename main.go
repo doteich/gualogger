@@ -32,8 +32,10 @@ func init() {
 func main() {
 	ctx := context.Background()
 
-	mgr = NewManager(&conf.Exporters)
-	mgr.SetupPubHandlers(ctx)
+	mgr = NewManager(&conf.Exporters, &conf.ExpMap)
+	if err := mgr.SetupPubHandlers(ctx); err != nil {
+		Logger.Error(err.Error(), "func", "main")
+	}
 
 	conf.Opcua.InitSuperVisor(ctx)
 }

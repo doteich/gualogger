@@ -28,3 +28,4 @@ exporters:                   # Map Struct of Exporters - Work in Progress
     username: username
     password: password
     database: database
+    table: gualogger

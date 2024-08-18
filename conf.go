@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gualogger/handlers"
 
 	"github.com/spf13/viper"
@@ -52,8 +51,7 @@ type OpcCerts struct {
 }
 
 type Exporters struct {
-	RegisteredExporters []string
-	TimeScaleDB         handlers.TimeScaleDB `mapstructure:"timescale-db"`
+	TimeScaleDB handlers.TimeScaleDB `mapstructure:"timescale-db"`
 }
 
 func LoadConfig() (Configuration, error) {
@@ -75,12 +73,15 @@ func LoadConfig() (Configuration, error) {
 		return conf, err
 	}
 
-	conf.Exporters.RegisteredExporters = make([]string, len(conf.ExpMap))
-
-	for e := range conf.ExpMap {
-		fmt.Println(e)
-		conf.Exporters.RegisteredExporters = append(conf.Exporters.RegisteredExporters, e)
-	}
-
 	return conf, nil
+}
+
+// Returns a map of all registered Exporters
+// To add a new Exporter add a new entry in format [`conf key name`]=Exporter struct
+
+func (e *Exporters) GetExporterRegister() map[string]handlers.Exporter {
+	exp := make(map[string]handlers.Exporter)
+	exp["timescale-db"] = &e.TimeScaleDB
+
+	return exp
 }
