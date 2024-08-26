@@ -76,7 +76,7 @@ func LoadConfig() (Configuration, error) {
 	return conf, nil
 }
 
-// Returns a map of all registered Exporters
+// Returns a map of all possible Exporters
 // To add a new Exporter add a new entry in format [`conf key name`]=Exporter struct
 
 func (e *Exporters) GetExporterRegister() map[string]handlers.Exporter {
