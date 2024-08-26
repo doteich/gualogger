@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"gualogger/handlers"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -205,7 +206,10 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 				if dcm.NodeID.String() == "i=2258" {
 					last_keepalive = time.Now()
 				} else {
-					fmt.Printf("received message for id %s with value %v %s on %s \n", dcm.NodeID, dcm.Value.Value(), dt, dcm.SourceTimestamp)
+					p := handlers.Payload{Value: dcm.Value.Value(), TS: dcm.SourceTimestamp, Name: dcm.NodeID.StringID(), Id: dcm.NodeID.String(), Datatype: dt}
+
+					mgr.Publish(ctx, p)
+
 				}
 
 			}

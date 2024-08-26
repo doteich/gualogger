@@ -44,6 +44,12 @@ func (m *ExportManager) SetupPubHandlers(ctx context.Context) error {
 	return nil
 }
 
-func Publish() {
+func (m *ExportManager) Publish(ctx context.Context, p handlers.Payload) {
+	for n, e := range m.exporters {
+		p.Server = conf.Opcua.Connection.Endpoint
 
+		if err := e.Publish(ctx, p); err != nil {
+			Logger.Error(fmt.Sprintf("failed to publish payload for exporter %s: %s", n, err.Error()), "func", "Publish")
+		}
+	}
 }

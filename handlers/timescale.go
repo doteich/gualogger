@@ -32,7 +32,7 @@ func (t *TimeScaleDB) Initialize(ctx context.Context) error {
 		return err
 	}
 
-	sql := `CREATE TABLE ` + t.Table
+	sql := `CREATE TABLE IF NOT EXISTS ` + t.Table
 
 	sql += ` (
 		value    TEXT NOT NULL,
@@ -49,7 +49,7 @@ func (t *TimeScaleDB) Initialize(ctx context.Context) error {
 		return err
 	}
 
-	sql = fmt.Sprintf("SELECT create_hypertable('%s', by_range('ts'))", t.Table)
+	sql = fmt.Sprintf("SELECT create_hypertable('%s', by_range('ts'), if_not_exists => TRUE)", t.Table)
 
 	_, err = t.Pool.Exec(ctx, sql)
 
@@ -64,7 +64,18 @@ func (t *TimeScaleDB) Initialize(ctx context.Context) error {
 
 // }
 
-func (t *TimeScaleDB) Publish(ctx context.Context, p payload) error {
+func (t *TimeScaleDB) Publish(ctx context.Context, p Payload) error {
+
+	sql := fmt.Sprintf("INSERT INTO %s (value, ts, name, id, datatype, server) VALUES ($1, $2, $3, $4, $5, $6)", t.Table)
+
+	args := []any{fmt.Sprint(p.Value), p.TS, p.Name, p.Id, p.Datatype, p.Server}
+
+	_, err := t.Pool.Exec(ctx, sql, args...)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
