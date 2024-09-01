@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"gualogger/logging"
 	"math/big"
 	"net/url"
 	"os"
@@ -24,7 +25,7 @@ func CreateKeyPair() error {
 	_, err2 := os.Stat("./certs/key.pem")
 
 	if err1 == nil && err2 == nil {
-		Logger.Info("certificate and key already present - skipping creating")
+		logging.Logger.Info("certificate and key already present - skipping creating")
 		return nil
 	}
 
@@ -48,7 +49,7 @@ func CreateKeyPair() error {
 
 	ca := x509.Certificate{
 		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{Country: []string{"DE"}, Organization: []string{"Guanaco"}},
+		Subject:               pkix.Name{Country: []string{"DE"}, Organization: []string{"Guanaco@" + hostName}},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(24 * 3650 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign | x509.KeyUsageContentCommitment,

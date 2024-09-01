@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gualogger/handlers"
+	"gualogger/logging"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -28,16 +29,16 @@ func (o *OpcConfig) InitSuperVisor(ctx context.Context) {
 	c, err := o.Connection.CreateClient(ctx)
 
 	if err != nil {
-		Logger.Error(err.Error(), "func", "InitSuperVisor")
+		logging.Logger.Error(err.Error(), "func", "InitSuperVisor")
 		return
 	}
 
-	Logger.Info(fmt.Sprintf("successfully connected to opcua on endpoint %s:%d", o.Connection.Endpoint, o.Connection.Port))
+	logging.Logger.Info(fmt.Sprintf("successfully connected to opcua on endpoint %s:%d", o.Connection.Endpoint, o.Connection.Port))
 
 	subctx, cancel := context.WithCancel(ctx)
 
 	if err := InitSubs(c, ctx, subctx, &o.Subscription.Nodeids, o.Subscription.Interval); err != nil {
-		Logger.Error(fmt.Sprintf("error while creating node monitor: %s", err.Error()), "func", "InitSuperVisor")
+		logging.Logger.Error(fmt.Sprintf("error while creating node monitor: %s", err.Error()), "func", "InitSuperVisor")
 		return
 	}
 
@@ -53,7 +54,7 @@ func (o *OpcConfig) InitSuperVisor(ctx context.Context) {
 
 			if retry_count < current_retry_count {
 
-				Logger.Warn(fmt.Sprintf("maximum number of %d retries exceeded- shutting down", retry_count), "func", "InitSuperVisor")
+				logging.Logger.Warn(fmt.Sprintf("maximum number of %d retries exceeded- shutting down", retry_count), "func", "InitSuperVisor")
 				cancel()
 				ctx.Done()
 				break
@@ -61,7 +62,7 @@ func (o *OpcConfig) InitSuperVisor(ctx context.Context) {
 
 			con_active = false
 
-			Logger.Warn(fmt.Sprintf("received last keepalive over %d seconds ago attempting retry attempt %d/%d", 60, current_retry_count, retry_count), "func", "InitSuperVisor")
+			logging.Logger.Warn(fmt.Sprintf("received last keepalive over %d seconds ago attempting retry attempt %d/%d", 60, current_retry_count, retry_count), "func", "InitSuperVisor")
 
 			if con_active {
 				cancel()
@@ -71,17 +72,17 @@ func (o *OpcConfig) InitSuperVisor(ctx context.Context) {
 			c, err = o.Connection.CreateClient(ctx)
 
 			if err != nil {
-				Logger.Error(err.Error(), "func", "InitSuperVisor")
+				logging.Logger.Error(err.Error(), "func", "InitSuperVisor")
 				continue
 			}
 
 			subctx, cancel = context.WithCancel(ctx)
 
 			if err := InitSubs(c, ctx, subctx, &o.Subscription.Nodeids, o.Subscription.Interval); err != nil {
-				Logger.Error(fmt.Sprintf("error while creating node monitor: %s", err.Error()), "func", "InitSuperVisor")
+				logging.Logger.Error(fmt.Sprintf("error while creating node monitor: %s", err.Error()), "func", "InitSuperVisor")
 				continue
 			}
-			Logger.Info("connection retry successful")
+			logging.Logger.Info("connection retry successful")
 			con_active = true
 			current_retry_count = 0
 		}
@@ -171,9 +172,9 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 	sub, err := m.Subscribe(pctx, &opcua.SubscriptionParameters{Interval: time.Duration(iv) * time.Second},
 		func(s *monitor.Subscription, dcm *monitor.DataChangeMessage) {
 			if dcm.Error != nil {
-				Logger.Error(fmt.Sprintf("error with received sub message: %s - nodeid %s", dcm.Error.Error(), dcm.NodeID))
+				logging.Logger.Error(fmt.Sprintf("error with received sub message: %s - nodeid %s", dcm.Error.Error(), dcm.NodeID))
 			} else if dcm.Status != ua.StatusOK {
-				Logger.Error(fmt.Sprintf("received bad status for sub message: %s - nodeid %s", dcm.Status, dcm.NodeID))
+				logging.Logger.Error(fmt.Sprintf("received bad status for sub message: %s - nodeid %s", dcm.Status, dcm.NodeID))
 			} else {
 				var dt string
 				switch dcm.Value.Value().(type) {
@@ -217,14 +218,14 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 		})
 
 	if err != nil {
-		Logger.Error(fmt.Sprintf("error while creating subscription: %s", err.Error()))
+		logging.Logger.Error(fmt.Sprintf("error while creating subscription: %s", err.Error()))
 		return
 	}
 
 	for _, n := range *ids {
 		_, err := sub.AddMonitorItems(ctx, monitor.Request{NodeID: ua.MustParseNodeID(n), MonitoringMode: ua.MonitoringModeReporting, MonitoringParameters: &ua.MonitoringParameters{DiscardOldest: true, QueueSize: 1}})
 		if err != nil {
-			Logger.Error(fmt.Sprintf("error adding subscription item: %s", err.Error()))
+			logging.Logger.Error(fmt.Sprintf("error adding subscription item: %s", err.Error()))
 			continue
 		}
 	}
@@ -232,14 +233,14 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 	_, err = sub.AddMonitorItems(ctx, monitor.Request{NodeID: ua.MustParseNodeID("i=2258"), MonitoringMode: ua.MonitoringModeReporting, MonitoringParameters: &ua.MonitoringParameters{DiscardOldest: true, QueueSize: 1}})
 
 	if err != nil {
-		Logger.Error(fmt.Sprintf("error adding subscription item: %s", err.Error()))
+		logging.Logger.Error(fmt.Sprintf("error adding subscription item: %s", err.Error()))
 		return
 	}
 
 	id := sub.SubscriptionID()
 	Subs[id] = sub
 
-	Logger.Info(fmt.Sprintf("successfully initialized subscription with id:%d", id))
+	logging.Logger.Info(fmt.Sprintf("successfully initialized subscription with id:%d", id))
 
 	defer TerminateSub(pctx, sub, id)
 	<-ctx.Done()
@@ -247,7 +248,7 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 
 func TerminateSub(ctx context.Context, s *monitor.Subscription, id uint32) {
 
-	Logger.Warn(fmt.Sprintf("terminating subscription with id: %d - delivered: %d - dropped: %d", id, s.Delivered(), s.Dropped()))
+	logging.Logger.Warn(fmt.Sprintf("terminating subscription with id: %d - delivered: %d - dropped: %d", id, s.Delivered(), s.Dropped()))
 	delete(Subs, id)
 	s.Unsubscribe(ctx)
 
