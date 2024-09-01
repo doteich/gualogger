@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gualogger/handlers"
+	"gualogger/logging"
 )
 
 type ExportManager struct {
@@ -24,7 +25,7 @@ func (m *ExportManager) RegisterExporters(e *Exporters, emap *map[string]interfa
 	for k := range *emap {
 		h, exists := reg[k]
 		if exists {
-			Logger.Info(fmt.Sprintf("registered exporter: %s", k), "func", "RegisterExporters")
+			logging.Logger.Info(fmt.Sprintf("registered exporter: %s", k), "func", "RegisterExporters")
 			m.exporters[k] = h
 		}
 	}
@@ -38,7 +39,7 @@ func (m *ExportManager) SetupPubHandlers(ctx context.Context) error {
 			return fmt.Errorf("error while initializing exporter %s - %s", n, err.Error())
 
 		}
-		Logger.Info(fmt.Sprintf("successfully initialized exporter: %s", n), "func", "SetupPubHandlers")
+		logging.Logger.Info(fmt.Sprintf("successfully initialized exporter: %s", n), "func", "SetupPubHandlers")
 
 	}
 	return nil
@@ -49,7 +50,7 @@ func (m *ExportManager) Publish(ctx context.Context, p handlers.Payload) {
 		p.Server = conf.Opcua.Connection.Endpoint
 
 		if err := e.Publish(ctx, p); err != nil {
-			Logger.Error(fmt.Sprintf("failed to publish payload for exporter %s: %s", n, err.Error()), "func", "Publish")
+			logging.Logger.Error(fmt.Sprintf("failed to publish payload for exporter %s: %s", n, err.Error()), "func", "Publish")
 		}
 	}
 }

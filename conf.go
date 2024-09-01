@@ -52,9 +52,10 @@ type OpcCerts struct {
 
 type Exporters struct {
 	TimeScaleDB handlers.TimeScaleDB `mapstructure:"timescale-db"`
+	Websocket   handlers.Websocket   `mapstructure:"websocket"`
 }
 
-func LoadConfig() (Configuration, error) {
+func LoadConfig() (*Configuration, error) {
 
 	var conf Configuration
 
@@ -66,14 +67,14 @@ func LoadConfig() (Configuration, error) {
 	v.AddConfigPath("./configs")       // Local Testing
 
 	if err := v.ReadInConfig(); err != nil {
-		return conf, err
+		return &conf, err
 	}
 
 	if err := v.Unmarshal(&conf); err != nil {
-		return conf, err
+		return &conf, err
 	}
 
-	return conf, nil
+	return &conf, nil
 }
 
 // Returns a map of all possible Exporters
@@ -82,6 +83,7 @@ func LoadConfig() (Configuration, error) {
 func (e *Exporters) GetExporterRegister() map[string]handlers.Exporter {
 	exp := make(map[string]handlers.Exporter)
 	exp["timescale-db"] = &e.TimeScaleDB
+	exp["websocket"] = &e.Websocket
 
 	return exp
 }
