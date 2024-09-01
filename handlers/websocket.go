@@ -94,3 +94,9 @@ func (ws *Websocket) Publish(ctx context.Context, p Payload) error {
 func (ws *Websocket) Shutdown(ctx context.Context) error {
 	return nil
 }
+
+func (c *client) ReadMessages() {
+	for {
+		select {}
+	}
+}
