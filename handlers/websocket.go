@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -25,6 +26,8 @@ var (
 			return true
 		},
 	}
+	pongDeadline = 10 * time.Second
+	pingInterval = (pongDeadline * 9) / 10
 )
 
 type manager struct {
@@ -33,8 +36,14 @@ type manager struct {
 }
 
 type client struct {
+	isAuth     bool
 	connection *websocket.Conn
 	manager    *manager
+}
+
+type inbound_event struct {
+	name    string
+	payload string
 }
 
 func (ws *Websocket) Initialize(ctx context.Context) error {
@@ -64,7 +73,7 @@ func (ws *Websocket) upgrade(w http.ResponseWriter, r *http.Request) {
 
 	ws.manager.RWMutex.Lock()
 
-	c := client{connection: conn, manager: &ws.manager}
+	c := client{connection: conn, manager: &ws.manager, isAuth: false}
 
 	ws.manager.clients[&c] = false
 
@@ -96,7 +105,45 @@ func (ws *Websocket) Shutdown(ctx context.Context) error {
 }
 
 func (c *client) ReadMessages() {
-	for {
-		select {}
+
+	defer c.manager.RemoveClient(c)
+
+	if err := c.connection.SetReadDeadline(time.Now().Add(pongDeadline)); err != nil {
+		return
 	}
+
+	c.connection.SetPongHandler(c.pongHandler)
+
+	for {
+		var inb inbound_event
+		if err := c.connection.ReadJSON(&inb); err != nil {
+			logging.Logger.Error(fmt.Sprintf("received malformed websocket message - removing client: %s", err.Error()))
+			return
+		}
+
+		switch inb.name {
+		case "authentication_message":
+		default:
+		}
+
+	}
+}
+
+func (m *manager) RemoveClient(c *client) {
+	m.Lock()
+	defer m.Unlock()
+
+	_, ok := m.clients[c]
+
+	if ok {
+		c.connection.Close()
+		delete(m.clients, c)
+	}
+
+}
+
+func (c *client) pongHandler(pongMsg string) error {
+	// Current time + Pong Wait time
+
+	return c.connection.SetReadDeadline(time.Now().Add(pongDeadline))
 }
