@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"gualogger/logging"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -15,6 +17,8 @@ import (
 type Websocket struct {
 	Port     int    `mapstruct:"port"`
 	Endpoint string `mapstruct:"endpoint"`
+	Username string `mapstruct:"username"`
+	Password string `mapstruct:"password"`
 	manager  manager
 }
 
@@ -33,22 +37,27 @@ var (
 type manager struct {
 	sync.RWMutex
 	clients map[*client]bool
+	secret  string
 }
 
 type client struct {
-	isAuth     bool
+	addedTS    time.Time
 	connection *websocket.Conn
 	manager    *manager
 }
 
 type inbound_event struct {
-	name    string
-	payload string
+	Name    string `json:"name"`
+	Payload string `json:"payload"`
 }
 
 func (ws *Websocket) Initialize(ctx context.Context) error {
 
-	ws.manager = manager{clients: make(map[*client]bool)}
+	str := fmt.Sprintf("%s:%s", ws.Username, ws.Password)
+
+	sec := base64.StdEncoding.EncodeToString([]byte(str))
+
+	ws.manager = manager{clients: make(map[*client]bool), secret: sec}
 
 	_, err := url.Parse(ws.Endpoint)
 
@@ -58,39 +67,22 @@ func (ws *Websocket) Initialize(ctx context.Context) error {
 
 	http.HandleFunc(ws.Endpoint, ws.upgrade)
 
+	go ws.manager.verifyClients()
+
 	go startServer(ws.Port)
 
 	return nil
-}
-
-func (ws *Websocket) upgrade(w http.ResponseWriter, r *http.Request) {
-	conn, err := websocketUpgrader.Upgrade(w, r, nil)
-
-	if err != nil {
-		logging.Logger.Error(fmt.Sprintf("error while upgrading websocket connection: %s", err.Error()), "func", "websocket_upgrade")
-		return
-	}
-
-	ws.manager.RWMutex.Lock()
-
-	c := client{connection: conn, manager: &ws.manager, isAuth: false}
-
-	ws.manager.clients[&c] = false
-
-}
-
-func startServer(port int) {
-	addr := fmt.Sprintf(":%d", port)
-
-	http.ListenAndServe(addr, nil)
 }
 
 func (ws *Websocket) Publish(ctx context.Context, p Payload) error {
 
 	var e error
 
-	for c := range ws.manager.clients {
+	for c, auth := range ws.manager.clients {
 
+		if !auth {
+			continue
+		}
 		if err := c.connection.WriteJSON(p); err != nil {
 			e = err
 			continue
@@ -104,9 +96,38 @@ func (ws *Websocket) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (c *client) ReadMessages() {
+func (ws *Websocket) upgrade(w http.ResponseWriter, r *http.Request) {
+	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 
-	defer c.manager.RemoveClient(c)
+	if err != nil {
+		logging.Logger.Error(fmt.Sprintf("error while upgrading websocket connection: %s", err.Error()), "func", "websocket_upgrade")
+		return
+	}
+
+	ws.manager.Lock()
+
+	defer ws.manager.Unlock()
+
+	c := client{connection: conn, manager: &ws.manager, addedTS: time.Now()}
+
+	ws.manager.clients[&c] = false
+
+	go c.readMessages()
+	go c.writeMessages()
+}
+
+func startServer(port int) {
+	addr := fmt.Sprintf(":%d", port)
+
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		logging.Logger.Error(fmt.Sprintf("unable to start websocket server on port %d: %s", port, err.Error()), "func", "websocket_startServer")
+		os.Exit(100)
+	}
+}
+
+func (c *client) readMessages() {
+
+	defer c.manager.removeClient(c)
 
 	if err := c.connection.SetReadDeadline(time.Now().Add(pongDeadline)); err != nil {
 		return
@@ -117,33 +138,90 @@ func (c *client) ReadMessages() {
 	for {
 		var inb inbound_event
 		if err := c.connection.ReadJSON(&inb); err != nil {
-			logging.Logger.Error(fmt.Sprintf("received malformed websocket message - removing client: %s", err.Error()))
+			logging.Logger.Warn(fmt.Sprintf("received malformed websocket message - removing client: %s", err.Error()), "func", "websocket_readmessages")
 			return
 		}
 
-		switch inb.name {
+		switch inb.Name {
 		case "authentication_message":
+			if inb.Payload == c.manager.secret {
+				c.manager.authenticateClient(c)
+				continue
+			}
+			return
+
 		default:
+			return
 		}
 
 	}
 }
 
-func (m *manager) RemoveClient(c *client) {
+func (c *client) writeMessages() {
+
+	tick := time.NewTicker(pingInterval)
+	defer func() {
+		tick.Stop()
+		c.manager.removeClient(c)
+	}()
+
+	for {
+		select {
+
+		case <-tick.C:
+			// Send the Ping
+			if err := c.connection.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				logging.Logger.Warn(fmt.Sprintf("unable to write ping message: %s", err.Error()), "func", "websocket_writemessages")
+				return
+			}
+		}
+
+	}
+}
+
+func (m *manager) authenticateClient(c *client) {
+	_, ok := m.clients[c]
+
+	if ok {
+		m.Lock()
+		m.clients[c] = true
+		m.Unlock()
+	}
+
+}
+
+func (m *manager) removeClient(c *client) {
 	m.Lock()
 	defer m.Unlock()
 
 	_, ok := m.clients[c]
 
 	if ok {
+		c.connection.WriteMessage(websocket.CloseMessage, []byte(""))
 		c.connection.Close()
 		delete(m.clients, c)
-	}
 
+		return
+	}
+	//logging.Logger.Warn("unable to remove websocket client from map", "func", "websocket_removeclient")
+}
+
+func (m *manager) verifyClients() {
+	for {
+		for c, auth := range m.clients {
+
+			if !auth && time.Since(c.addedTS) > 10*time.Second {
+				logging.Logger.Info("websocket client was unable to authenticate in the specified timeframe - removing client", "func", "websocket_verifyclients")
+				m.removeClient(c)
+			}
+
+		}
+
+		time.Sleep(30 * time.Second)
+	}
 }
 
 func (c *client) pongHandler(pongMsg string) error {
-	// Current time + Pong Wait time
 
 	return c.connection.SetReadDeadline(time.Now().Add(pongDeadline))
 }
