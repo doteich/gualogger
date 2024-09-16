@@ -32,5 +32,5 @@ exporters:                   # Map Struct of Exporters - Work in Progress
   websocket:
     endpoint: /ws
     port: 80
-    username: username
-    password: password
+    username: username      # Specified Username, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
+    password: password      # Specified Password, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
