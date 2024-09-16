@@ -6,12 +6,12 @@ import (
 )
 
 type Payload struct {
-	Value    interface{}
-	TS       time.Time
-	Name     string
-	Id       string
-	Datatype string
-	Server   string
+	Value    interface{} `json:"value"`
+	TS       time.Time   `json:"ts"`
+	Name     string      `json:"name"`
+	Id       string      `json:"id"`
+	Datatype string      `json:"datatype"`
+	Server   string      `json:"server"`
 }
 
 type Exporter interface {
