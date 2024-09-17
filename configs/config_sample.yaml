@@ -23,14 +23,14 @@ opcua:
       - i=2258
 exporters:                   # Map Struct of Exporters - Work in Progress
   timescale-db:
-    host: hostname
-    port: 5432
-    username: username
-    password: password
-    database: database
-    table: gualogger
+    host: hostname           # Hostname of the connection string
+    port: 5432               # Port of the connection string
+    username: username       # Username of the connection string
+    password: password       # Password of the connection string
+    database: database       # Database of the connection string
+    table: gualogger         # Table where the data should be logged to
   websocket:
-    endpoint: /ws
-    port: 80
+    endpoint: /ws           # Websocket address will be ':{{port}}/{{endpoint}}'
+    port: 80                # Port the webserver will listen on
     username: username      # Specified Username, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
     password: password      # Specified Password, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
