@@ -32,6 +32,7 @@ var (
 	}
 	pongDeadline = 10 * time.Second
 	pingInterval = (pongDeadline * 9) / 10
+	callback     func(context.Context) []Payload
 )
 
 type manager struct {
@@ -51,7 +52,7 @@ type inbound_event struct {
 	Payload string `json:"payload"`
 }
 
-func (ws *Websocket) Initialize(ctx context.Context) error {
+func (ws *Websocket) Initialize(ctx context.Context, cb func(context.Context) []Payload) error {
 
 	str := fmt.Sprintf("%s:%s", ws.Username, ws.Password)
 
@@ -66,6 +67,8 @@ func (ws *Websocket) Initialize(ctx context.Context) error {
 	}
 
 	http.HandleFunc(ws.Endpoint, ws.upgrade)
+
+	callback = cb
 
 	go ws.manager.verifyClients()
 
@@ -149,6 +152,11 @@ func (c *client) readMessages() {
 				continue
 			}
 			return
+		case "read_message":
+			pay := callback(context.Background())
+			for _, p := range pay {
+				fmt.Println(p.Id, p.Value)
+			}
 
 		default:
 			return

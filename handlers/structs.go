@@ -15,7 +15,7 @@ type Payload struct {
 }
 
 type Exporter interface {
-	Initialize(ctx context.Context) error
+	Initialize(ctx context.Context, callback func(context.Context) []Payload) error
 	Publish(ctx context.Context, p Payload) error
 	Shutdown(ctx context.Context) error
 }

@@ -34,8 +34,13 @@ func (m *ExportManager) RegisterExporters(e *Exporters, emap *map[string]interfa
 // Setup exporter by calling the Initialize() function of each exporters interface
 // If the initialization of one exporter fails, the first error gets returned
 func (m *ExportManager) SetupPubHandlers(ctx context.Context) error {
+
+	callback := func(c context.Context) []handlers.Payload {
+		return Read(c)
+	}
+
 	for n, e := range m.exporters {
-		if err := e.Initialize(ctx); err != nil {
+		if err := e.Initialize(ctx, callback); err != nil {
 			return fmt.Errorf("error while initializing exporter %s - %s", n, err.Error())
 
 		}

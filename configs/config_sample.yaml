@@ -30,7 +30,7 @@ exporters:                   # Map Struct of Exporters - Work in Progress
     database: database       # Database of the connection string
     table: gualogger         # Table where the data should be logged to
   websocket:
-    endpoint: /ws           # Websocket address will be ':{{port}}/{{endpoint}}'
-    port: 80                # Port the webserver will listen on
-    username: username      # Specified Username, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
-    password: password      # Specified Password, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
+    endpoint: /ws            # Websocket address will be ':{{port}}/{{endpoint}}'
+    port: 80                 # Port the webserver will listen on
+    username: username       # Specified Username, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
+    password: password       # Specified Password, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
