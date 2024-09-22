@@ -17,7 +17,7 @@ type TimeScaleDB struct {
 	Pool     *pgxpool.Pool
 }
 
-func (t *TimeScaleDB) Initialize(ctx context.Context) error {
+func (t *TimeScaleDB) Initialize(ctx context.Context, cb func(context.Context) []Payload) error {
 	cs := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", t.Username, t.Password, t.Host, t.Port, t.Database)
 
 	var err error

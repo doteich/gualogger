@@ -18,6 +18,7 @@ var (
 	retry_count         int
 	current_retry_count = 0
 	Subs                map[uint32]*monitor.Subscription
+	current_client      *opcua.Client
 )
 
 func (o *OpcConfig) InitSuperVisor(ctx context.Context) {
@@ -149,6 +150,7 @@ func (c *OpcConnection) CreateClient(ctx context.Context) (*opcua.Client, error)
 		return nil, err
 	}
 
+	current_client = client
 	return client, nil
 
 }
@@ -163,7 +165,7 @@ func InitSubs(c *opcua.Client, pctx context.Context, ctx context.Context, ids *[
 
 	go CreateSubscription(pctx, ctx, m, ids, iv)
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(10 * time.Second)
 	return nil
 }
 
@@ -176,34 +178,9 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 			} else if dcm.Status != ua.StatusOK {
 				logging.Logger.Error(fmt.Sprintf("received bad status for sub message: %s - nodeid %s", dcm.Status, dcm.NodeID))
 			} else {
-				var dt string
-				switch dcm.Value.Value().(type) {
-				case int:
-					dt = "Int"
-				case uint8:
-					dt = "u8"
-				case uint16:
-					dt = "u16"
-				case uint32:
-					dt = "u32"
-				case int8:
-					dt = "i8"
-				case int16:
-					dt = "i16"
-				case int32:
-					dt = "i32"
-				case int64:
-					dt = "i64"
-				case float32:
-					dt = "f32"
-				case float64:
-					dt = "f64"
-				case bool:
-					dt = "Bool"
-				default:
-					dt = "Str"
 
-				}
+				dt := DeferDatatype(dcm.DataValue.Value.Value())
+
 				if dcm.NodeID.String() == "i=2258" {
 					last_keepalive = time.Now()
 				} else {
@@ -251,5 +228,79 @@ func TerminateSub(ctx context.Context, s *monitor.Subscription, id uint32) {
 	logging.Logger.Warn(fmt.Sprintf("terminating subscription with id: %d - delivered: %d - dropped: %d", id, s.Delivered(), s.Dropped()))
 	delete(Subs, id)
 	s.Unsubscribe(ctx)
+
+}
+
+func DeferDatatype(i interface{}) string {
+	var dt string
+	switch i.(type) {
+	case int:
+		dt = "Int"
+	case uint8:
+		dt = "u8"
+	case uint16:
+		dt = "u16"
+	case uint32:
+		dt = "u32"
+	case int8:
+		dt = "i8"
+	case int16:
+		dt = "i16"
+	case int32:
+		dt = "i32"
+	case int64:
+		dt = "i64"
+	case float32:
+		dt = "f32"
+	case float64:
+		dt = "f64"
+	case bool:
+		dt = "Bool"
+	default:
+		dt = "Str"
+
+	}
+
+	return dt
+}
+
+func Read(ctx context.Context) []handlers.Payload {
+
+	pay := make([]handlers.Payload, 0)
+	nodes := make([]*ua.ReadValueID, 0)
+
+	if !con_active {
+		return pay
+	}
+
+	for _, n := range conf.Opcua.Subscription.Nodeids {
+
+		id, err := ua.ParseNodeID(n)
+
+		if err != nil {
+			logging.Logger.Error(fmt.Sprintf("error parsing node id while reading:%s", err.Error()), "func", "read")
+			continue
+		}
+
+		nodes = append(nodes, &ua.ReadValueID{NodeID: id})
+	}
+
+	res, err := current_client.Read(ctx, &ua.ReadRequest{NodesToRead: nodes})
+
+	if err != nil {
+		logging.Logger.Error(fmt.Sprintf("error occured during opc ua read request:%s", err.Error()), "func", "read")
+		return pay
+	}
+
+	for _, r := range res.Results {
+		dt := DeferDatatype(r.Value.Value())
+
+		p := handlers.Payload{Value: r.Value.Value(), TS: r.SourceTimestamp, Name: "", Id: "", Datatype: dt}
+
+		pay = append(pay, p)
+
+	}
+
+	return pay
 
 }
