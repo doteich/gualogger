@@ -53,6 +53,7 @@ type OpcCerts struct {
 type Exporters struct {
 	TimeScaleDB handlers.TimeScaleDB `mapstructure:"timescale-db"`
 	Websocket   handlers.Websocket   `mapstructure:"websocket"`
+	Mqtt        handlers.Mqtt        `mapstructure:"mqtt"`
 }
 
 func LoadConfig() (*Configuration, error) {
@@ -84,6 +85,6 @@ func (e *Exporters) GetExporterRegister() map[string]handlers.Exporter {
 	exp := make(map[string]handlers.Exporter)
 	exp["timescale-db"] = &e.TimeScaleDB
 	exp["websocket"] = &e.Websocket
-
+	exp["mqtt"] = &e.Mqtt
 	return exp
 }

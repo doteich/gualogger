@@ -34,3 +34,14 @@ exporters:                   # Map Struct of Exporters - Work in Progress
     port: 80                 # Port the webserver will listen on
     username: username       # Specified Username, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
     password: password       # Specified Password, which will be used to create the base64 encoded secret to authenticate the ws client to the server - format b64(user:password)
+  mqtt:
+    protocol: mqtt           # Protocol of the connection string mqtt or mqtts, default is mqtt
+    protocol_version: 4      # Protocol version of the connection string, default is 4
+    host: localhost          # Hostname of the connection string
+    port: 1883               # Port of the connection string
+    username: username       # Username of the connection string
+    password: password       # Password of the connection string
+    topic: gualogger         # Topic where the data should be logged to
+    client_id: gualogger     # Client ID of the connection string
+    qos: 0                   # Quality of Service of the connection string, default is 0
+    retain: false            # Retain flag of the connection string, default is false

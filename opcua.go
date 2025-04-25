@@ -106,7 +106,11 @@ func (c *OpcConnection) CreateClient(ctx context.Context) (*opcua.Client, error)
 		return nil, fmt.Errorf("no endpoints found - check configuration")
 	}
 
-	ep := opcua.SelectEndpoint(eps, c.Policy, ua.MessageSecurityModeFromString(c.Mode))
+	ep, err := opcua.SelectEndpoint(eps, c.Policy, ua.MessageSecurityModeFromString(c.Mode))
+
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []opcua.Option{
 		opcua.ApplicationName("guanaco"),
@@ -201,6 +205,7 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 
 	for _, n := range *ids {
 		_, err := sub.AddMonitorItems(ctx, monitor.Request{NodeID: ua.MustParseNodeID(n), MonitoringMode: ua.MonitoringModeReporting, MonitoringParameters: &ua.MonitoringParameters{DiscardOldest: true, QueueSize: 1}})
+
 		if err != nil {
 			logging.Logger.Error(fmt.Sprintf("error adding subscription item: %s", err.Error()))
 			continue
