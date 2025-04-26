@@ -153,9 +153,13 @@ func (c *client) readMessages() {
 			}
 			return
 		case "read_message":
+
 			pay := callback(context.Background())
 			for _, p := range pay {
-				fmt.Println(p.Id, p.Value)
+				if err := c.connection.WriteJSON(p); err != nil {
+					logging.Logger.Warn(fmt.Sprintf("unable to write batch message: %s", err.Error()), "func", "websocket_readmessages")
+					break
+				}
 			}
 
 		default:

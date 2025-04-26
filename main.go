@@ -33,6 +33,9 @@ func main() {
 	ctx := context.Background()
 
 	mgr = NewManager(&conf.Exporters, &conf.ExpMap)
+
+	mgr.BuildMeta(conf.Opcua.Subscription.Nodeids)
+
 	if err := mgr.SetupPubHandlers(ctx); err != nil {
 		logging.Logger.Error(err.Error(), "func", "main")
 	}

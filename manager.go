@@ -9,6 +9,7 @@ import (
 
 type ExportManager struct {
 	exporters map[string]handlers.Exporter
+	Meta      map[string][]Meta
 }
 
 // Initializes a new manager instance
@@ -29,6 +30,20 @@ func (m *ExportManager) RegisterExporters(e *Exporters, emap *map[string]interfa
 			m.exporters[k] = h
 		}
 	}
+}
+
+func (m *ExportManager) BuildMeta(arr []Nodeid) {
+	m.Meta = make(map[string][]Meta)
+	for _, n := range arr {
+		meta := make([]Meta, 0)
+
+		for _, met := range n.Meta {
+			meta = append(meta, Meta{Key: met.Key, Value: met.Value})
+		}
+		m.Meta[n.Id] = meta
+	}
+
+	fmt.Println(m.Meta)
 }
 
 // Setup exporter by calling the Initialize() function of each exporters interface

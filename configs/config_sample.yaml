@@ -19,8 +19,13 @@ opcua:
     retry_count: 10          # Number of Retries the the connection should retried to the server
   subscription:
     sub_interval: 10         # Subcription Interval in Seconds           
-    nodeids:                 # List of Node IDs
-      - i=2258
+    nodeids:                 # List of Node IDs and associated meta information in key value pairs
+      - id: i=2258
+        meta:
+          - key: mqtt_topic
+            value: 'gualogger/topic1'
+          - key: name
+            value: 'timestamp'
 exporters:                   # Map Struct of Exporters - Work in Progress
   timescale-db:
     host: hostname           # Hostname of the connection string
@@ -45,3 +50,4 @@ exporters:                   # Map Struct of Exporters - Work in Progress
     client_id: gualogger     # Client ID of the connection string
     qos: 0                   # Quality of Service of the connection string, default is 0
     retain: false            # Retain flag of the connection string, default is false
+    topic_by_nodeid: false   # If true, the topic will be set by the meta information of per nodeid. !Important! the mqtt_topic has to be the first entry per nodeid in the meta object. If false the single topic is set in the mqtt config object 

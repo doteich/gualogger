@@ -159,7 +159,7 @@ func (c *OpcConnection) CreateClient(ctx context.Context) (*opcua.Client, error)
 
 }
 
-func InitSubs(c *opcua.Client, pctx context.Context, ctx context.Context, ids *[]string, iv int) error {
+func InitSubs(c *opcua.Client, pctx context.Context, ctx context.Context, ids *[]Nodeid, iv int) error {
 	m, err := monitor.NewNodeMonitor(c)
 
 	if err != nil {
@@ -173,7 +173,7 @@ func InitSubs(c *opcua.Client, pctx context.Context, ctx context.Context, ids *[
 	return nil
 }
 
-func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.NodeMonitor, ids *[]string, iv int) {
+func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.NodeMonitor, ids *[]Nodeid, iv int) {
 
 	sub, err := m.Subscribe(pctx, &opcua.SubscriptionParameters{Interval: time.Duration(iv) * time.Second},
 		func(s *monitor.Subscription, dcm *monitor.DataChangeMessage) {
@@ -204,7 +204,7 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 	}
 
 	for _, n := range *ids {
-		_, err := sub.AddMonitorItems(ctx, monitor.Request{NodeID: ua.MustParseNodeID(n), MonitoringMode: ua.MonitoringModeReporting, MonitoringParameters: &ua.MonitoringParameters{DiscardOldest: true, QueueSize: 1}})
+		_, err := sub.AddMonitorItems(ctx, monitor.Request{NodeID: ua.MustParseNodeID(n.Id), MonitoringMode: ua.MonitoringModeReporting, MonitoringParameters: &ua.MonitoringParameters{DiscardOldest: true, QueueSize: 1}})
 
 		if err != nil {
 			logging.Logger.Error(fmt.Sprintf("error adding subscription item: %s", err.Error()))
@@ -280,7 +280,7 @@ func Read(ctx context.Context) []handlers.Payload {
 
 	for _, n := range conf.Opcua.Subscription.Nodeids {
 
-		id, err := ua.ParseNodeID(n)
+		id, err := ua.ParseNodeID(n.Id)
 
 		if err != nil {
 			logging.Logger.Error(fmt.Sprintf("error parsing node id while reading:%s", err.Error()), "func", "read")

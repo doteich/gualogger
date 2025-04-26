@@ -18,7 +18,7 @@ type OpcConfig struct {
 }
 
 type Subscription struct {
-	Nodeids  []string `mapstructure:"nodeids"`
+	Nodeids  []Nodeid `mapstructure:"nodeids"`
 	Interval int      `mapstructure:"sub_interval"`
 }
 
@@ -54,6 +54,16 @@ type Exporters struct {
 	TimeScaleDB handlers.TimeScaleDB `mapstructure:"timescale-db"`
 	Websocket   handlers.Websocket   `mapstructure:"websocket"`
 	Mqtt        handlers.Mqtt        `mapstructure:"mqtt"`
+}
+
+type Nodeid struct {
+	Id   string `mapstructure:"id"`
+	Meta []Meta `mapstructure:"meta"`
+}
+
+type Meta struct {
+	Key   string `mapstructure:"key"`
+	Value string `mapstructure:"value"`
 }
 
 func LoadConfig() (*Configuration, error) {
