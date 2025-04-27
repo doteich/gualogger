@@ -40,12 +40,14 @@ func (t *TimeScaleDB) Initialize(ctx context.Context, cb func(context.Context) [
 		name     TEXT NOT NULL,
 		id       TEXT NOT NULL,
 		datatype TEXT NOT NULL,
-		server   TEXT NOT NULL
+		server   TEXT NOT NULL,
+		meta 	JSONB NOT NULL DEFAULT '{}'::JSONB
 		);`
 
 	_, err = t.Pool.Exec(ctx, sql)
 
 	if err != nil {
+		fmt.Println("Error creating tabel:", err)
 		return err
 	}
 
@@ -54,6 +56,7 @@ func (t *TimeScaleDB) Initialize(ctx context.Context, cb func(context.Context) [
 	_, err = t.Pool.Exec(ctx, sql)
 
 	if err != nil {
+		fmt.Println("Error creating hypertable:", err)
 		return err
 	}
 
@@ -66,9 +69,9 @@ func (t *TimeScaleDB) Initialize(ctx context.Context, cb func(context.Context) [
 
 func (t *TimeScaleDB) Publish(ctx context.Context, p Payload) error {
 
-	sql := fmt.Sprintf("INSERT INTO %s (value, ts, name, id, datatype, server) VALUES ($1, $2, $3, $4, $5, $6)", t.Table)
+	sql := fmt.Sprintf("INSERT INTO %s (value, ts, name, id, datatype, server, meta) VALUES ($1, $2, $3, $4, $5, $6, $7)", t.Table)
 
-	args := []any{fmt.Sprint(p.Value), p.TS, p.Name, p.Id, p.Datatype, p.Server}
+	args := []any{fmt.Sprint(p.Value), p.TS, p.Name, p.Id, p.Datatype, p.Server, p.Meta}
 
 	_, err := t.Pool.Exec(ctx, sql, args...)
 

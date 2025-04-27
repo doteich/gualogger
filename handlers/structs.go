@@ -12,6 +12,12 @@ type Payload struct {
 	Id       string      `json:"id"`
 	Datatype string      `json:"datatype"`
 	Server   string      `json:"server"`
+	Meta     []Meta      `json:"meta"`
+}
+
+type Meta struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 type Exporter interface {

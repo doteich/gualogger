@@ -19,6 +19,7 @@ type Mqtt struct {
 	ClientID        string `mapstructure:"client_id"`
 	QoS             int    `mapstructure:"qos"`
 	Retain          bool   `mapstructure:"retain"`
+	TopicByNodeId   bool   `mapstructure:"topic_by_nodeid"`
 	Client          Paho.Client
 }
 
@@ -49,6 +50,11 @@ func (m *Mqtt) Initialize(ctx context.Context, cb func(context.Context) []Payloa
 }
 
 func (m *Mqtt) Publish(ctx context.Context, p Payload) error {
+	topic := m.Topic
+
+	if m.TopicByNodeId && len(p.Meta) > 0 {
+		topic = p.Meta[0].Value
+	}
 
 	b, err := json.Marshal(p)
 
@@ -56,7 +62,7 @@ func (m *Mqtt) Publish(ctx context.Context, p Payload) error {
 		return fmt.Errorf("failed to marshal payload: %s", err)
 	}
 
-	if token := m.Client.Publish(m.Topic, byte(m.QoS), m.Retain, b); token.Wait() && token.Error() != nil {
+	if token := m.Client.Publish(topic, byte(m.QoS), m.Retain, b); token.Wait() && token.Error() != nil {
 		return fmt.Errorf("failed to publish message: %s", token.Error())
 	}
 	return nil

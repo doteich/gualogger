@@ -57,13 +57,8 @@ type Exporters struct {
 }
 
 type Nodeid struct {
-	Id   string `mapstructure:"id"`
-	Meta []Meta `mapstructure:"meta"`
-}
-
-type Meta struct {
-	Key   string `mapstructure:"key"`
-	Value string `mapstructure:"value"`
+	Id   string          `mapstructure:"id"`
+	Meta []handlers.Meta `mapstructure:"meta"`
 }
 
 func LoadConfig() (*Configuration, error) {

@@ -8,8 +8,9 @@ import (
 )
 
 type ExportManager struct {
-	exporters map[string]handlers.Exporter
-	Meta      map[string][]Meta
+	exporters   map[string]handlers.Exporter
+	Meta        map[string][]handlers.Meta
+	IncludeMeta bool
 }
 
 // Initializes a new manager instance
@@ -33,17 +34,23 @@ func (m *ExportManager) RegisterExporters(e *Exporters, emap *map[string]interfa
 }
 
 func (m *ExportManager) BuildMeta(arr []Nodeid) {
-	m.Meta = make(map[string][]Meta)
+	m.Meta = make(map[string][]handlers.Meta, 0)
+	hasMeta := false
+
 	for _, n := range arr {
-		meta := make([]Meta, 0)
+		meta := make([]handlers.Meta, 0)
+
+		if len(n.Meta) > 0 {
+			hasMeta = true
+		}
 
 		for _, met := range n.Meta {
-			meta = append(meta, Meta{Key: met.Key, Value: met.Value})
+			meta = append(meta, handlers.Meta{Key: met.Key, Value: met.Value})
 		}
 		m.Meta[n.Id] = meta
 	}
+	m.IncludeMeta = hasMeta
 
-	fmt.Println(m.Meta)
 }
 
 // Setup exporter by calling the Initialize() function of each exporters interface
@@ -66,6 +73,11 @@ func (m *ExportManager) SetupPubHandlers(ctx context.Context) error {
 }
 
 func (m *ExportManager) Publish(ctx context.Context, p handlers.Payload) {
+	if m.IncludeMeta {
+		if meta, exists := m.Meta[p.Id]; exists {
+			p.Meta = meta
+		}
+	}
 	for n, e := range m.exporters {
 		p.Server = conf.Opcua.Connection.Endpoint
 
