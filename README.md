@@ -3,7 +3,9 @@
 **gualogger** is a Go-based OPC UA router designed to efficiently connect to OPC UA servers and forward data changes to various output channels.  It is built with extensibility and cloud-native deployment in mind.
 
 [![Go](https://img.shields.io/badge/Go-1.20-blue.svg)](https://go.dev/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)  ## Features
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)  
+
+## Features
 
 * **OPC UA Connectivity:** Connects to OPC UA servers using the `gopcua` library, handling various security policies and modes.
 * **Data Routing:** Forwards OPC UA data changes to multiple configurable output channels (exporters).
@@ -122,7 +124,7 @@ exporters:                   # Map Struct of Exporters - Work in Progress
     qos: 0
     retain: false
     topic_by_nodeid: false   # If true, the topic will be set by the meta information of per nodeid. !Important! the mqtt_topic has to be the first entry per nodeid in the meta object. If false the single topic is set in the mqtt config object
-
+```
 ### Running the Application
 
 ```bash
