@@ -2,7 +2,7 @@
 
 **gualogger** is a Go-based OPC UA router designed to efficiently connect to OPC UA servers and forward data changes to various output channels.  It is built with extensibility and cloud-native deployment in mind.
 
-[![Go](https://img.shields.io/badge/Go-1.20-blue.svg)](https://go.dev/)
+[![Go](https://img.shields.io/badge/Go-1.23-blue.svg)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)  
 
 ## Features

@@ -1,3 +1,4 @@
 /configs/config.yaml
 /certs/
 /utils/
+/kube/gualogger-operator/target/
