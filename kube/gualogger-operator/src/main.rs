@@ -1,8 +1,9 @@
 use k8s_openapi::api::core::{v1::Pod};
 use kube::Client;
 use kube::api::{Api, ListParams};
+mod crd;
 
-use std::env;
+
 
 #[tokio::main]
 async fn main() {

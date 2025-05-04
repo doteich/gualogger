@@ -76,6 +76,13 @@ spec:
                           type: string
                     retry_count:
                       type: integer
+                  required:
+                    - endpoint
+                    - port
+                    - mode
+                    - policy
+                    - authentication
+                    - certificate
                 subscription:
                   type: object
                   properties:
@@ -97,6 +104,9 @@ spec:
                                   type: string
                                 value:
                                   type: string
+                  required:
+                    - sub_interval
+                    - nodeids
                 exporters:
                   type: object
                   properties:
@@ -115,6 +125,13 @@ spec:
                           type: string
                         table:
                           type: string
+                      required:
+                        - host
+                        - port
+                        - username
+                        - password
+                        - database
+                        - table
                     websocket:
                       type: object
                       properties:
@@ -126,6 +143,11 @@ spec:
                           type: string
                         password:
                           type: string
+                      required:
+                        - endpoint
+                        - port
+                        - username
+                        - password
                     mqtt:
                       type: object
                       properties:
@@ -154,6 +176,42 @@ spec:
                           type: boolean
                         topic_by_nodeid:
                           type: boolean
+                      required:
+                        - protocol
+                        - protocol_version
+                        - host
+                        - port
+                        - topic
+                        - client_id
+                        - qos
+                        - retain
+                kube:
+                  type: object
+                  properties:
+                    namespace:
+                      type: string
+                    name:
+                      type: string
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    image:
+                      type: object
+                      properties:
+                        repository:
+                          type: string
+                        version:
+                          type: string
+                        pullPolicy:
+                          type: string
+                  required:
+                    - namespace
+                    - name
   scope: Namespaced
   names:
     plural: gualoggers
