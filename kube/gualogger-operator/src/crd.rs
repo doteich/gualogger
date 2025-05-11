@@ -4,13 +4,18 @@
 
 
 
+
 #[allow(unused_imports)]
 mod prelude {
     pub use kube::CustomResource;
     pub use schemars::JsonSchema;
     pub use serde::{Serialize, Deserialize};
     pub use std::collections::BTreeMap;
+    pub use kube::CustomResourceExt;
+
 }
+use crate::crd;
+
 use self::prelude::*;
 
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, JsonSchema)]

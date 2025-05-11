@@ -2,4 +2,4 @@
 /certs/
 /utils/
 /kube/gualogger-operator/target/
-/kube/crd/ressource.yaml
+*my_ressource.yaml
