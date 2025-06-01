@@ -1,17 +1,15 @@
 use std::sync::{Arc, RwLock};
 
 use crd::GuaLogger;
-use k8s_openapi::api::core::v1::Pod;
+
 use kube::Client;
 use kube::Error;
-use kube::api::{Api, ListParams};
+use kube::ResourceExt;
+use kube::api::Api;
 use kube::runtime::Controller;
 use kube::runtime::controller::Action;
 use kube::runtime::reflector::Lookup;
 use kube::runtime::watcher::Config;
-use serde::de;
-use std::error::Error as StdError;
-use std::future::Future;
 
 use futures::stream::StreamExt;
 use tokio::time::Duration;
@@ -77,7 +75,42 @@ async fn main() {
 async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action, Error> {
     let client = &context.client;
 
-    println!("got update for object: {:?}, with uid: {:?}", logger.metadata.name, logger.metadata.uid);
+    println!(
+        "got update for object: {:?}, with uid: {:?}",
+        logger.metadata.name, logger.metadata.uid
+    );
+
+    let namespace = logger.metadata.namespace.as_deref().unwrap_or("default");
+
+    if logger
+        .metadata
+        .finalizers
+        .as_ref()
+        .map_or(true, |finalizers| finalizers.is_empty())
+        || !logger
+            .metadata
+            .finalizers
+            .as_ref()
+            .map_or(false, |finalizers| {
+                finalizers.contains(&"gualoggers.doteich.com/finalizer".to_string())
+            })
+    {
+        // Add finalizer if it doesn't exist
+        match &logger.metadata.name {
+            Some(name) => {
+                finalizer::add(client.clone(), &name, &namespace).await?;
+            }
+            None => {
+                eprintln!("Logger name is missing, cannot add finalizer.");
+            }
+        }
+    } else {
+        // Finalizer already exists, proceed with reconciliation
+        println!(
+            "Finalizer already exists for logger: {:?}",
+            logger.metadata.name
+        );
+    }
 
     // let res = deployment::spawn_deployment(
     //     client,
@@ -98,7 +131,10 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
     Ok(Action::requeue(Duration::from_secs(10)))
 }
 
-fn on_error(echo: Arc<GuaLogger>, error: &Error, _context: Arc<Data>) -> Action {
-    eprintln!("Reconciliation error:\n{:?}.\n{:?}", error, echo);
-    Action::requeue(Duration::from_secs(5))
+fn on_error(logger: Arc<GuaLogger>, error: &Error, _context: Arc<Data>) -> Action {
+    eprintln!(
+        "Reconciliation error:\n{:?}.\n{:?}",
+        error, logger.metadata.name
+    );
+    Action::requeue(Duration::from_secs(60))
 }
