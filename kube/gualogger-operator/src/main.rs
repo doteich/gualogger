@@ -4,6 +4,7 @@ use crd::GuaLogger;
 
 use kube::Client;
 use kube::Error;
+use kube::Resource;
 use kube::ResourceExt;
 use kube::api::Api;
 use kube::runtime::Controller;
@@ -12,6 +13,7 @@ use kube::runtime::reflector::Lookup;
 use kube::runtime::watcher::Config;
 
 use futures::stream::StreamExt;
+use serde::de;
 use tokio::time::Duration;
 
 mod configmap;
@@ -82,34 +84,38 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
 
     let namespace = logger.metadata.namespace.as_deref().unwrap_or("default");
 
-    if logger
-        .metadata
-        .finalizers
-        .as_ref()
-        .map_or(true, |finalizers| finalizers.is_empty())
-        || !logger
-            .metadata
-            .finalizers
-            .as_ref()
-            .map_or(false, |finalizers| {
-                finalizers.contains(&"gualoggers.doteich.com/finalizer".to_string())
-            })
-    {
-        // Add finalizer if it doesn't exist
-        match &logger.metadata.name {
-            Some(name) => {
-                finalizer::add(client.clone(), &name, &namespace).await?;
-            }
-            None => {
-                eprintln!("Logger name is missing, cannot add finalizer.");
-            }
+    match determine_action(&logger) {
+        NextAction::Create => {
+            println!("Creating new resource: {:?}", logger.metadata.name);
+            finalizer::add(
+                client.clone(),
+                logger.metadata.name.as_deref().unwrap_or("default-name"),
+                namespace,
+            )
+            .await?;
+            // Here you would typically create the resource, e.g., a deployment
+            // For now, we just return a requeue action
+            return Ok(Action::requeue(Duration::from_secs(10)));
         }
-    } else {
-        // Finalizer already exists, proceed with reconciliation
-        println!(
-            "Finalizer already exists for logger: {:?}",
-            logger.metadata.name
-        );
+        NextAction::Update => {
+            println!("Updating existing resource: {:?}", logger.metadata.name);
+            // Handle update logic here
+            return Ok(Action::requeue(Duration::from_secs(10)));
+        }
+        NextAction::Delete => {
+            println!("Deleting resource: {:?}", logger.metadata.name);
+            finalizer::remove(
+                client.clone(),
+                logger.metadata.name.as_deref().unwrap_or("default-name"),
+                namespace,
+            )
+            .await?;
+            // Handle deletion logic here
+            return Ok(Action::requeue(Duration::from_secs(10)));
+        }
+        NextAction::NoAction => {
+            println!("No action needed for resource: {:?}", logger.metadata.name);
+        }
     }
 
     // let res = deployment::spawn_deployment(
@@ -137,4 +143,21 @@ fn on_error(logger: Arc<GuaLogger>, error: &Error, _context: Arc<Data>) -> Actio
         error, logger.metadata.name
     );
     Action::requeue(Duration::from_secs(60))
+}
+
+fn determine_action(logger: &GuaLogger) -> NextAction {
+    if logger.metadata.deletion_timestamp.is_some() {
+        return NextAction::Delete;
+    }
+
+    if logger
+        .meta()
+        .finalizers
+        .as_ref()
+        .map_or(true, |finalizers| finalizers.is_empty())
+    {
+        return NextAction::Create;
+    }
+
+    NextAction::NoAction
 }
