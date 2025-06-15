@@ -7,6 +7,8 @@ use kube::Error;
 use kube::Resource;
 use kube::ResourceExt;
 use kube::api::Api;
+use kube::client;
+use kube::config;
 use kube::runtime::Controller;
 use kube::runtime::controller::Action;
 use kube::runtime::reflector::Lookup;
@@ -31,6 +33,8 @@ struct Data {
 pub enum NextAction {
     Create,
     Update,
+    RecreateConfigMap,
+    // RecreateDeployment,
     Delete,
     NoAction,
 }
@@ -77,62 +81,71 @@ async fn main() {
 async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action, Error> {
     let client = &context.client;
 
-    println!(
-        "got update for object: {:?}, with uid: {:?}",
-        logger.metadata.name, logger.metadata.uid
-    );
+    let source_namespace = logger.metadata.namespace.as_deref().unwrap_or("default");
 
-    let namespace = logger.metadata.namespace.as_deref().unwrap_or("default");
+    let name: &str = logger.metadata.name.as_deref().unwrap_or("default-name");
 
-    match determine_action(&logger) {
+    let kube_config = extract_kube_struct_from_logger(&logger.clone()).map_err(|e| {
+        Error::from(kube::Error::Api(kube::core::ErrorResponse {
+            status: "bad request".to_string(),
+            message: e.to_string(),
+            reason: "kube object is missing from spec".to_string(),
+            code: 404,
+        }))
+    })?;
+    let data = extract_data_from_logger(&logger).map_err(|e| {
+        Error::from(kube::Error::Api(kube::core::ErrorResponse {
+            status: "bad request".to_string(),
+            message: e.to_string(),
+            reason: "logger data is missing from spec".to_string(),
+            code: 404,
+        }))
+    })?;
+
+    match determine_action(&logger, client, &kube_config.namespace).await {
         NextAction::Create => {
-            println!("Creating new resource: {:?}", logger.metadata.name);
-            finalizer::add(
-                client.clone(),
-                logger.metadata.name.as_deref().unwrap_or("default-name"),
-                namespace,
+            println!("Creating new resource: {:?}", name);
+            finalizer::add(client.clone(), name, source_namespace).await?;
+
+            configmap::create(
+                client,
+                &kube_config.namespace,
+                format!("{}-configmap", name).as_str(),
+                &data,
             )
             .await?;
+
             // Here you would typically create the resource, e.g., a deployment
             // For now, we just return a requeue action
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
         NextAction::Update => {
-            println!("Updating existing resource: {:?}", logger.metadata.name);
+            println!("Updating existing resource: {:?}", name);
             // Handle update logic here
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
         NextAction::Delete => {
-            println!("Deleting resource: {:?}", logger.metadata.name);
-            finalizer::remove(
-                client.clone(),
-                logger.metadata.name.as_deref().unwrap_or("default-name"),
-                namespace,
+            println!("Deleting resource: {:?}", name);
+            finalizer::remove(client.clone(), name, source_namespace).await?;
+            // Handle deletion logic here
+            return Ok(Action::requeue(Duration::from_secs(10)));
+        }
+        NextAction::RecreateConfigMap => {
+            println!("Recreating ConfigMap for resource: {:?}", name);
+
+            configmap::create(
+                client,
+                &kube_config.namespace,
+                format!("{}-configmap", name).as_str(),
+                &data,
             )
             .await?;
-            // Handle deletion logic here
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
         NextAction::NoAction => {
             println!("No action needed for resource: {:?}", logger.metadata.name);
         }
     }
-
-    // let res = deployment::spawn_deployment(
-    //     client,
-    //     "default",
-    //     logger.name().as_deref().unwrap_or("default-name"),
-    //     "nginx:latest",
-    // )
-    // .await;
-
-    // match res {
-    //     Ok(_) => Ok(Action::requeue(Duration::from_secs(10))),
-    //     Err(e) => {
-    //         eprintln!("Error creating deployment: {:?}", e);
-    //         Err(e)
-    //     }
-    // }
 
     Ok(Action::requeue(Duration::from_secs(10)))
 }
@@ -145,7 +158,7 @@ fn on_error(logger: Arc<GuaLogger>, error: &Error, _context: Arc<Data>) -> Actio
     Action::requeue(Duration::from_secs(60))
 }
 
-fn determine_action(logger: &GuaLogger) -> NextAction {
+async fn determine_action(logger: &GuaLogger, client: &Client, ns: &str) -> NextAction {
     if logger.metadata.deletion_timestamp.is_some() {
         return NextAction::Delete;
     }
@@ -159,5 +172,46 @@ fn determine_action(logger: &GuaLogger) -> NextAction {
         return NextAction::Create;
     }
 
+    let result = configmap::verify(
+        client,
+        ns,
+        &format!(
+            "{}-configmap",
+            logger.metadata.name.as_deref().unwrap_or("default-name")
+        ),
+    )
+    .await;
+
+    match result {
+        Ok(exists) => {
+            if !exists {
+             
+                return NextAction::RecreateConfigMap;
+            }
+        }
+        Err(e) => {
+            eprintln!("Error verifying ConfigMap: {:?}", e);
+        }
+    }
+
     NextAction::NoAction
+}
+
+fn extract_data_from_logger(logger: &GuaLogger) -> Result<String, Box<dyn std::error::Error>> {
+    if let Some(logger_data) = &logger.spec.logger {
+        let yaml_raw = serde_yaml::to_string(logger_data)?;
+        Ok(yaml_raw)
+    } else {
+        Err("No logger data found in logger spec".into())
+    }
+}
+
+fn extract_kube_struct_from_logger(
+    logger: &GuaLogger,
+) -> Result<crd::GuaLoggerKube, Box<dyn std::error::Error>> {
+    if let Some(kube_struct) = &logger.spec.kube {
+        Ok(kube_struct.clone())
+    } else {
+        Err("No kube struct found in logger spec".into())
+    }
 }

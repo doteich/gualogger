@@ -2,20 +2,13 @@
 // kopium command: kopium gualoggers.doteich.com -A
 // kopium version: 0.21.2
 
-
-
-
 #[allow(unused_imports)]
 mod prelude {
     pub use kube::CustomResource;
     pub use schemars::JsonSchema;
     pub use serde::{Serialize, Deserialize};
     pub use std::collections::BTreeMap;
-    pub use kube::CustomResourceExt;
-
 }
-use crate::crd;
-
 use self::prelude::*;
 
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, JsonSchema)]
@@ -23,139 +16,9 @@ use self::prelude::*;
 #[kube(namespaced)]
 pub struct GuaLoggerSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub connection: Option<GuaLoggerConnection>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exporters: Option<GuaLoggerExporters>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kube: Option<GuaLoggerKube>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub subscription: Option<GuaLoggerSubscription>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerConnection {
-    pub authentication: GuaLoggerConnectionAuthentication,
-    pub certificate: GuaLoggerConnectionCertificate,
-    pub endpoint: String,
-    pub mode: GuaLoggerConnectionMode,
-    pub policy: GuaLoggerConnectionPolicy,
-    pub port: i64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub retry_count: Option<i64>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerConnectionAuthentication {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub certificate: Option<GuaLoggerConnectionAuthenticationCertificate>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub credentials: Option<GuaLoggerConnectionAuthenticationCredentials>,
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "type")]
-    pub r#type: Option<GuaLoggerConnectionAuthenticationType>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerConnectionAuthenticationCertificate {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub certificate_path: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub private_key_path: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerConnectionAuthenticationCredentials {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub password: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub username: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub enum GuaLoggerConnectionAuthenticationType {
-    None,
-    #[serde(rename = "User&Password")]
-    UserPassword,
-    Certificate,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerConnectionCertificate {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub auto_create: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub certificate_path: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub private_key_path: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub enum GuaLoggerConnectionMode {
-    None,
-    Sign,
-    SignAndEncrypt,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub enum GuaLoggerConnectionPolicy {
-    None,
-    Basic256,
-    Basic256Sha256,
-    Aes256Sha256RsaPss,
-    Aes128Sha256RsaOaep,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerExporters {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mqtt: Option<GuaLoggerExportersMqtt>,
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "timescale-db")]
-    pub timescale_db: Option<GuaLoggerExportersTimescaleDb>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub websocket: Option<GuaLoggerExportersWebsocket>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerExportersMqtt {
-    pub client_id: String,
-    pub host: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub password: Option<String>,
-    pub port: i64,
-    pub protocol: GuaLoggerExportersMqttProtocol,
-    pub protocol_version: i64,
-    pub qos: i64,
-    pub retain: bool,
-    pub topic: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topic_by_nodeid: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub username: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub enum GuaLoggerExportersMqttProtocol {
-    #[serde(rename = "mqtt")]
-    Mqtt,
-    #[serde(rename = "mqtts")]
-    Mqtts,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerExportersTimescaleDb {
-    pub database: String,
-    pub host: String,
-    pub password: String,
-    pub port: i64,
-    pub table: String,
-    pub username: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerExportersWebsocket {
-    pub endpoint: String,
-    pub password: String,
-    pub port: i64,
-    pub username: String,
+    pub logger: Option<GuaLoggerLogger>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
@@ -166,7 +29,6 @@ pub struct GuaLoggerKube {
     pub image: Option<GuaLoggerKubeImage>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub labels: Option<BTreeMap<String, String>>,
-    pub name: String,
     pub namespace: String,
 }
 
@@ -181,21 +43,157 @@ pub struct GuaLoggerKubeImage {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerSubscription {
-    pub nodeids: Vec<GuaLoggerSubscriptionNodeids>,
+pub struct GuaLoggerLogger {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<GuaLoggerLoggerConnection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exporters: Option<GuaLoggerLoggerExporters>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subscription: Option<GuaLoggerLoggerSubscription>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerConnection {
+    pub authentication: GuaLoggerLoggerConnectionAuthentication,
+    pub certificate: GuaLoggerLoggerConnectionCertificate,
+    pub endpoint: String,
+    pub mode: GuaLoggerLoggerConnectionMode,
+    pub policy: GuaLoggerLoggerConnectionPolicy,
+    pub port: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retry_count: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerConnectionAuthentication {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credentials: Option<GuaLoggerLoggerConnectionAuthenticationCredentials>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "type")]
+    pub r#type: Option<GuaLoggerLoggerConnectionAuthenticationType>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerConnectionAuthenticationCredentials {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub certificate: Option<GuaLoggerLoggerConnectionAuthenticationCredentialsCertificate>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerConnectionAuthenticationCredentialsCertificate {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub certificate_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub private_key_path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub enum GuaLoggerLoggerConnectionAuthenticationType {
+    None,
+    #[serde(rename = "User&Password")]
+    UserPassword,
+    Certificate,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerConnectionCertificate {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_create: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub certificate_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub private_key_path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub enum GuaLoggerLoggerConnectionMode {
+    None,
+    Sign,
+    SignAndEncrypt,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub enum GuaLoggerLoggerConnectionPolicy {
+    None,
+    Basic256,
+    Basic256Sha256,
+    Aes256Sha256RsaPss,
+    Aes128Sha256RsaOaep,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerExporters {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mqtt: Option<GuaLoggerLoggerExportersMqtt>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "timescale-db")]
+    pub timescale_db: Option<GuaLoggerLoggerExportersTimescaleDb>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub websocket: Option<GuaLoggerLoggerExportersWebsocket>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerExportersMqtt {
+    pub client_id: String,
+    pub host: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+    pub port: i64,
+    pub protocol: GuaLoggerLoggerExportersMqttProtocol,
+    pub protocol_version: i64,
+    pub qos: i64,
+    pub retain: bool,
+    pub topic: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topic_by_nodeid: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub enum GuaLoggerLoggerExportersMqttProtocol {
+    #[serde(rename = "mqtt")]
+    Mqtt,
+    #[serde(rename = "mqtts")]
+    Mqtts,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerExportersTimescaleDb {
+    pub database: String,
+    pub host: String,
+    pub password: String,
+    pub port: i64,
+    pub table: String,
+    pub username: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerExportersWebsocket {
+    pub endpoint: String,
+    pub password: String,
+    pub port: i64,
+    pub username: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct GuaLoggerLoggerSubscription {
+    pub nodeids: Vec<GuaLoggerLoggerSubscriptionNodeids>,
     pub sub_interval: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerSubscriptionNodeids {
+pub struct GuaLoggerLoggerSubscriptionNodeids {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub meta: Option<Vec<GuaLoggerSubscriptionNodeidsMeta>>,
+    pub meta: Option<Vec<GuaLoggerLoggerSubscriptionNodeidsMeta>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct GuaLoggerSubscriptionNodeidsMeta {
+pub struct GuaLoggerLoggerSubscriptionNodeidsMeta {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

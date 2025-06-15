@@ -1,10 +1,10 @@
 use crate::crd::GuaLogger;
 use k8s_openapi::api::core::v1::ConfigMap;
-use kube::api::{ObjectMeta, PostParams};
 use kube::Client;
+use kube::api::{ObjectMeta, PostParams};
 use std::collections::BTreeMap;
 
-fn create_configmap(client: &Client, namespace: &str, name: &str, data: &String) {
+pub async fn create(client: &Client, namespace: &str, name: &str, data: &String) -> Result<(), kube::Error> {
     let mut labels = Some(BTreeMap::new());
 
     labels
@@ -21,4 +21,27 @@ fn create_configmap(client: &Client, namespace: &str, name: &str, data: &String)
         data: Some(BTreeMap::from([("config.yaml".to_string(), data.clone())])),
         ..ConfigMap::default()
     };
+
+    let configmaps: kube::Api<ConfigMap> = kube::Api::namespaced(client.clone(), namespace);
+
+    configmaps.create(&PostParams::default(), &configmap).await?;
+
+    Ok(())
 }
+
+
+pub async fn verify(client: &Client, namespace: &str, name: &str) -> Result<bool, kube::Error> {
+    let configmaps: kube::Api<ConfigMap> = kube::Api::namespaced(client.clone(), namespace);
+    match configmaps.get(name).await {
+        Ok(_) => Ok(true),
+        Err(kube::Error::Api(e)) if e.code == 404 => Ok(false),
+        Err(e) => Err(e),
+    }
+}
+
+// pub async fn delete(client: &Client, namespace: &str, name: &str) {
+//     let configmaps: kube::Api<ConfigMap> = kube::Api::namespaced(client.clone(), namespace);
+//     if let Err(e) = configmaps.delete(name, &PostParams::default()).await {
+//         eprintln!("Failed to delete ConfigMap {}: {}", name, e);
+//     }
+// }
