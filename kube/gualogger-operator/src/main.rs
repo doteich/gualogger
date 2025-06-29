@@ -107,11 +107,13 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
             println!("Creating new resource: {:?}", name);
             finalizer::add(client.clone(), name, source_namespace).await?;
 
-            configmap::create(
+            configmap::create(client, &kube_config.namespace, name, &data).await?;
+
+            deployment::create(
                 client,
                 &kube_config.namespace,
-                format!("{}-configmap", name).as_str(),
-                &data,
+                name,
+                "cinderstries/gualogger:0.0.1",
             )
             .await?;
 
@@ -125,21 +127,18 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
         NextAction::Delete => {
-            println!("Deleting resource: {:?}", name);
             finalizer::remove(client.clone(), name, source_namespace).await?;
+
+            configmap::delete(client, &kube_config.namespace, name).await?;
+            deployment::delete(client, &kube_config.namespace, name).await?;
+
             // Handle deletion logic here
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
         NextAction::RecreateConfigMap => {
             println!("Recreating ConfigMap for resource: {:?}", name);
 
-            configmap::create(
-                client,
-                &kube_config.namespace,
-                format!("{}-configmap", name).as_str(),
-                &data,
-            )
-            .await?;
+            configmap::create(client, &kube_config.namespace, name, &data).await?;
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
         NextAction::NoAction => {
@@ -175,17 +174,13 @@ async fn determine_action(logger: &GuaLogger, client: &Client, ns: &str) -> Next
     let result = configmap::verify(
         client,
         ns,
-        &format!(
-            "{}-configmap",
-            logger.metadata.name.as_deref().unwrap_or("default-name")
-        ),
+        logger.metadata.name.as_deref().unwrap_or("default-name"),
     )
     .await;
 
     match result {
         Ok(exists) => {
             if !exists {
-             
                 return NextAction::RecreateConfigMap;
             }
         }
