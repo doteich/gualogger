@@ -1,21 +1,14 @@
-use std::sync::{Arc, RwLock};
-
+use crate::crd::GuaLoggerKubeImage;
 use crd::GuaLogger;
-
+use futures::stream::StreamExt;
 use kube::Client;
 use kube::Error;
 use kube::Resource;
-use kube::ResourceExt;
 use kube::api::Api;
-use kube::client;
-use kube::config;
 use kube::runtime::Controller;
 use kube::runtime::controller::Action;
-use kube::runtime::reflector::Lookup;
 use kube::runtime::watcher::Config;
-
-use futures::stream::StreamExt;
-use serde::de;
+use std::sync::Arc;
 use tokio::time::Duration;
 
 mod configmap;
@@ -30,11 +23,17 @@ struct Data {
     //state: Arc<RwLock<State>>,
 }
 
+struct ImageData {
+    image: String,
+    version: String,
+    policy: String,
+}
+
 pub enum NextAction {
     Create,
     Update,
     RecreateConfigMap,
-    // RecreateDeployment,
+    RecreateDeployment,
     Delete,
     NoAction,
 }
@@ -93,6 +92,10 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
             code: 404,
         }))
     })?;
+
+    let image = extract_image(kube_config.image);
+    let image_str = image.image + ":" + &image.version;
+
     let data = extract_data_from_logger(&logger).map_err(|e| {
         Error::from(kube::Error::Api(kube::core::ErrorResponse {
             status: "bad request".to_string(),
@@ -109,13 +112,7 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
 
             configmap::create(client, &kube_config.namespace, name, &data).await?;
 
-            deployment::create(
-                client,
-                &kube_config.namespace,
-                name,
-                "cinderstries/gualogger:0.0.1",
-            )
-            .await?;
+            deployment::create(client, &kube_config.namespace, name, &image_str).await?;
 
             // Here you would typically create the resource, e.g., a deployment
             // For now, we just return a requeue action
@@ -136,11 +133,19 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
         NextAction::RecreateConfigMap => {
-            println!("Recreating ConfigMap for resource: {:?}", name);
+            println!("Recreating configmap for resource: {:?}", name);
 
             configmap::create(client, &kube_config.namespace, name, &data).await?;
             return Ok(Action::requeue(Duration::from_secs(10)));
         }
+
+        NextAction::RecreateDeployment => {
+            println!("Recreating deployment for resource: {:?}", name);
+
+            deployment::create(client, &kube_config.namespace, name, &image_str).await?;
+            return Ok(Action::requeue(Duration::from_secs(10)));
+        }
+
         NextAction::NoAction => {
             println!("No action needed for resource: {:?}", logger.metadata.name);
         }
@@ -171,17 +176,35 @@ async fn determine_action(logger: &GuaLogger, client: &Client, ns: &str) -> Next
         return NextAction::Create;
     }
 
-    let result = configmap::verify(
+    let cm_result = configmap::verify(
         client,
         ns,
         logger.metadata.name.as_deref().unwrap_or("default-name"),
     )
     .await;
 
-    match result {
+    match cm_result {
         Ok(exists) => {
             if !exists {
                 return NextAction::RecreateConfigMap;
+            }
+        }
+        Err(e) => {
+            eprintln!("Error verifying ConfigMap: {:?}", e);
+        }
+    }
+
+    let dep_result = deployment::verify(
+        client,
+        ns,
+        logger.metadata.name.as_deref().unwrap_or("default-name"),
+    )
+    .await;
+
+    match dep_result {
+        Ok(exists) => {
+            if !exists {
+                return NextAction::RecreateDeployment;
             }
         }
         Err(e) => {
@@ -208,5 +231,35 @@ fn extract_kube_struct_from_logger(
         Ok(kube_struct.clone())
     } else {
         Err("No kube struct found in logger spec".into())
+    }
+}
+
+fn extract_image(kube_str: Option<GuaLoggerKubeImage>) -> ImageData {
+    let mut data = {
+        ImageData {
+            image: "cinderstries/gualogger".to_string(),
+            version: "0.0.1".to_string(),
+            policy: "Always".to_string(),
+        }
+    };
+
+    match kube_str {
+        Some(k) => {
+            if let Some(repo) = k.repository {
+                data.image = repo;
+            };
+            if let Some(version) = k.version {
+                data.version = version;
+            };
+
+            if let Some(policy) = k.pull_policy {
+                data.policy = policy
+            }
+
+            return data;
+        }
+        None => {
+            return data;
+        }
     }
 }

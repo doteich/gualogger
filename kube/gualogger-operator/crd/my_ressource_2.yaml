@@ -5,7 +5,7 @@ metadata:
 spec:
   logger:
     connection:
-      endpoint: 192.168.178.108
+      endpoint: 192.168.178.146
       port: 49320
       mode: SignAndEncrypt
       policy: Basic256Sha256
@@ -17,7 +17,7 @@ spec:
     subscription:
       sub_interval: 1
       nodeids:
-        - id: "ns=2;s=Machines.Packaging.Tag 1"
+        - id: "ns=2;s=Machines.Packaging.Tag1"
           meta:
             - key: name
               value: "Tag 1"
