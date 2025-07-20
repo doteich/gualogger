@@ -40,6 +40,7 @@ pub struct GuaLoggerKubeImage {
     pub repository: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    pub(crate) value: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]

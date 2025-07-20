@@ -1,13 +1,10 @@
-use crate::crd::GuaLoggerKubeImage;
-use crd::GuaLogger;
+use crate::crd::{GuaLogger, GuaLoggerKubeImage};
 use futures::stream::StreamExt;
-use kube::Client;
-use kube::Error;
-use kube::Resource;
-use kube::api::Api;
-use kube::runtime::Controller;
-use kube::runtime::controller::Action;
-use kube::runtime::watcher::Config;
+use kube::{
+    Client, Error, Resource,
+    api::Api,
+    runtime::{Controller, controller::Action, watcher::Config},
+};
 use std::sync::Arc;
 use tokio::time::Duration;
 
@@ -16,6 +13,7 @@ mod crd;
 mod deployment;
 mod finalizer;
 mod helpers;
+mod webserver;
 
 #[derive(Clone)]
 struct Data {
@@ -50,6 +48,8 @@ async fn main() {
     let context: Arc<Data> = Arc::new(Data {
         client: kclient.clone(),
     });
+
+    tokio::spawn(webserver::create(kclient.clone()));
 
     Controller::new(loggers.clone(), Config::default())
         .run(reconciler, on_error, context)

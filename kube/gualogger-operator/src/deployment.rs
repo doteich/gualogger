@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
+use std::fmt::Error;
+use std::vec;
 
 use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
 use k8s_openapi::api::core::v1::{
-    ConfigMapVolumeSource, Container, PodSpec, PodTemplateSpec, Volume, VolumeMount,
+    ConfigMapVolumeSource, Container, PodSpec, PodTemplateSpec, Volume, VolumeDevice, VolumeMount,
 };
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::LabelSelector;
-use kube::api::{DeleteParams, ObjectMeta, PostParams};
+use kube::api::{DeleteParams, ListParams, ObjectList, ObjectMeta, PostParams};
 use kube::{Api, Client};
 
 pub async fn create(
@@ -20,6 +22,10 @@ pub async fn create(
         .as_mut()
         .unwrap()
         .insert("app".to_string(), name.to_string());
+    labels
+        .as_mut()
+        .unwrap()
+        .insert("type".to_string(), "gualogger".to_string());
 
     // Create a new deployment
     let deployment = Deployment {
@@ -79,11 +85,11 @@ pub async fn create(
 }
 
 pub async fn verify(client: &Client, namespace: &str, name: &str) -> Result<bool, kube::Error> {
-    let configmaps: kube::Api<Deployment> = kube::Api::namespaced(client.clone(), namespace);
+    let deployments: kube::Api<Deployment> = kube::Api::namespaced(client.clone(), namespace);
 
-    let cm_name = name.to_owned() + "-deployment";
+    let dep_name = name.to_owned() + "-deployment";
 
-    match configmaps.get(&cm_name).await {
+    match deployments.get(&dep_name).await {
         Ok(_) => Ok(true),
         Err(kube::Error::Api(e)) if e.code == 404 => Ok(false),
         Err(e) => Err(e),
@@ -100,4 +106,23 @@ pub async fn delete(client: &Client, namespace: &str, name: &str) -> Result<(), 
     } else {
         Ok(())
     }
+}
+
+pub async fn get(client: &Client) -> Result<ObjectList<Deployment>, kube::Error> {
+    let deployments: kube::Api<Deployment> = kube::Api::all(client.clone());
+    let lp = ListParams::default();
+
+    let filter = lp.labels("type=gualogger");
+
+    let dep_list = deployments.list(&filter).await;
+
+    match dep_list {
+        Ok(list) => Ok(list),
+        Err(e) =>{
+            return Err(e)
+        }
+    }
+
+
+   
 }

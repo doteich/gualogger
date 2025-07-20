@@ -12,10 +12,14 @@ pub async fn create(
 ) -> Result<(), kube::Error> {
     let mut labels = Some(BTreeMap::new());
 
-    labels
+     labels
         .as_mut()
         .unwrap()
         .insert("app".to_string(), name.to_string());
+    labels
+        .as_mut()
+        .unwrap()
+        .insert("type".to_string(), "gualogger".to_string());
 
     let configmap = ConfigMap {
         metadata: ObjectMeta {
