@@ -6,13 +6,23 @@
 mod prelude {
     pub use kube::CustomResource;
     pub use schemars::JsonSchema;
-    pub use serde::{Serialize, Deserialize};
+    pub use serde::{Deserialize, Serialize};
     pub use std::collections::BTreeMap;
 }
+use kube::{
+    Client,
+    api::{ListParams, ObjectList},
+};
+
 use self::prelude::*;
 
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, JsonSchema)]
-#[kube(group = "doteich.com", version = "v1alpha", kind = "GuaLogger", plural = "gualoggers")]
+#[kube(
+    group = "doteich.com",
+    version = "v1alpha",
+    kind = "GuaLogger",
+    plural = "gualoggers"
+)]
 #[kube(namespaced)]
 pub struct GuaLoggerSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -34,7 +44,11 @@ pub struct GuaLoggerKube {
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct GuaLoggerKubeImage {
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "pullPolicy")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "pullPolicy"
+    )]
     pub pull_policy: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub repository: Option<String>,
@@ -129,7 +143,11 @@ pub enum GuaLoggerLoggerConnectionPolicy {
 pub struct GuaLoggerLoggerExporters {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mqtt: Option<GuaLoggerLoggerExportersMqtt>,
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "timescale-db")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "timescale-db"
+    )]
     pub timescale_db: Option<GuaLoggerLoggerExportersTimescaleDb>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub websocket: Option<GuaLoggerLoggerExportersWebsocket>,
@@ -201,3 +219,11 @@ pub struct GuaLoggerLoggerSubscriptionNodeidsMeta {
     pub value: Option<String>,
 }
 
+pub async fn get(client: &Client) -> Result<ObjectList<GuaLogger>, kube::Error> {
+    let crds: kube::Api<GuaLogger> = kube::Api::all(client.clone());
+    let lp = ListParams::default();
+
+    let crd_list = crds.list(&lp).await?;
+
+    Ok(crd_list)
+}

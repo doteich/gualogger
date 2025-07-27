@@ -114,15 +114,7 @@ pub async fn get(client: &Client) -> Result<ObjectList<Deployment>, kube::Error>
 
     let filter = lp.labels("type=gualogger");
 
-    let dep_list = deployments.list(&filter).await;
+    let dep_list = deployments.list(&filter).await?;
 
-    match dep_list {
-        Ok(list) => Ok(list),
-        Err(e) =>{
-            return Err(e)
-        }
-    }
-
-
-   
+    Ok(dep_list)
 }
