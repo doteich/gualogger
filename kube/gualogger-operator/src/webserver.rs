@@ -47,7 +47,7 @@ pub async fn create(client: kube::Client) {
         Err(err) => {
             println!("{}", err)
         }
-    }
+    } 
 }
 
 async fn fetch_deployments(

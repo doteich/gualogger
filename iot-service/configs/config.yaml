@@ -1,0 +1,49 @@
+opcua:
+  connection:
+    endpoint: 192.168.178.108
+    port: 49320
+    mode: SignAndEncrypt     # Possible Entries: 'None', 'Sign', 'SignAndEncrypt'
+    policy: Basic256Sha256   # Possible Entries: 'None', 'Basic256', 'Basic256Sha256', 'Aes256Sha256RsaPss', 'Aes128Sha256RsaOaep'
+    authentication:
+      type: 'None'           # Possible Entries: 'None', 'User&Password', 'Certificate'
+      credentials:           # Only necessary if type is 'User&Password'
+        username: ''
+        password: ''
+      certificate:           # Only necessary if type is 'Certificate'
+        certificate_path: '' # absolute path to certificate file pem encoded
+        private_key_path: '' # absolute path to private key file pem encoded
+    certificate:             # Only necessary if mode is 'Sign' or 'SignAndEncrypt'
+        auto_create: true    # if true, the application will create a self-signed cert on startup, external provided certs are ignored
+        certificate_path: '' # absolute path to certificate file used for signing/encryption pem encoded - 
+        private_key_path: '' # absolute path to private key file used for signing/encryption pem encoded
+    retry_count: 10          # Number of Retries the the connection should retried to the server
+  subscription:
+    sub_interval: 1         # Subcription Interval in Seconds           
+    nodeids:                # List of Node IDs and associated meta information in key value pairs
+        - id: 'ns=2;s=Machines.Packaging.Tag 1'
+          meta:
+            - key: 'name'
+              value: 'Tag 1'
+            - key: mqtt_topic
+              value: 'gualogger/tag1'
+        - id: 'ns=2;s=Machines.Packaging.Tag 2'
+exporters:                   # Map Struct of Exporters - Work in Progress
+  timescale-db:
+    host: localhost
+    port: 5432
+    username: postgres
+    password: postgres
+    database: postgres
+    table: gualogger
+  mqtt:
+    protocol: mqtt           # Protocol of the connection string mqtt or mqtts, default is mqtt
+    protocol_version: 4      # Protocol version of the connection string, default is 4
+    host: localhost          # Hostname of the connection string
+    port: 1883               # Port of the connection string
+    username: admin          # Username of the connection string
+    password: admin          # Password of the connection string
+    topic: gualogger         # Topic where the data should be logged to
+    client_id: gualogger     # Client ID of the connection string
+    qos: 0                   # Quality of Service of the connection string, default is 0
+    retain: false            # Retain flag of the connection string, default is false
+    topic_by_nodeid: true   # If true, the topic will be set by the meta information of per nodeid. !Important! the mqtt_topic has to be the first entry per nodeid in the meta object. If false the single topic is set in the mqtt config object
