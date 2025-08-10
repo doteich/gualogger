@@ -1,1 +1,3 @@
 *.pem
+
+/configs/config.yaml
