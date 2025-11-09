@@ -1,0 +1,29 @@
+# This rule is not used by the project geist-operator itself.
+# It is provided to allow the cluster admin to help manage permissions for users.
+#
+# Grants read-only access to geistconnectors.doteich.com resources.
+# This role is intended for users who need visibility into these resources
+# without permissions to modify them. It is ideal for monitoring purposes and limited-access viewing.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: geist-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: geistconnector-viewer-role
+rules:
+- apiGroups:
+  - geistconnectors.doteich.com
+  resources:
+  - geistconnectors
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - geistconnectors.doteich.com
+  resources:
+  - geistconnectors/status
+  verbs:
+  - get

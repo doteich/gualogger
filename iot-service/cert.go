@@ -49,7 +49,7 @@ func CreateKeyPair() error {
 
 	ca := x509.Certificate{
 		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{Country: []string{"DE"}, Organization: []string{"Guanaco@" + hostName}},
+		Subject:               pkix.Name{Country: []string{"DE"}, Organization: []string{"Geist@" + hostName}},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(24 * 3650 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign | x509.KeyUsageContentCommitment,

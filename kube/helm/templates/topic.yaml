@@ -1,0 +1,13 @@
+apiVersion: cluster.redpanda.com/v1alpha2
+kind: Topic
+metadata:
+  name: geist-topic
+  namespace: geist
+spec:
+  kafkaApiSpec:
+    brokers:
+      - "redpanda-0.redpanda.geist.svc.cluster.local:9093"
+    tls:
+      caCertSecretRef:
+        name: "redpanda-default-cert"
+        key: "ca.crt"

@@ -1,18 +1,31 @@
+@font-face {
+  font-display: swap;
+  /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Zen Dots';
+  font-style: normal;
+  font-weight: 400;
+  src: url('./zen-dots-v13-latin-regular.woff2') format('woff2');
+  /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+}
+
+
 :root {
   --p-background: #ffffff;
   --p-text-color: #333333;
   --p-color-1: #f4f4f5;
-
   --p-color-2: #e4e4e7;
-
-
+  --a-color-1: rgb(0, 140, 255);
 }
+
+
+
 
 html.dark {
   --p-background: #1a1a1a;
   --p-text-color: #e5e5e5;
   --p-color-1: #2a2a2a;
   --p-color-2: #3a3a3a;
+  --a-color-1: rgb(255, 0, 119);
 }
 
 body {

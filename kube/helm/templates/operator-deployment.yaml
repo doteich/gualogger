@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: geist
+  name: geist
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: geist
+  template:
+    metadata:
+      labels:
+        app: geist
+    spec:
+      serviceAccountName: gualogger-sa
+      containers:
+      - image: doteich/geist-operator
+        name: geist-operator
+

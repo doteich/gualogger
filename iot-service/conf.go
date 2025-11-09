@@ -7,9 +7,8 @@ import (
 )
 
 type Configuration struct {
-	Opcua     OpcConfig              `mapstructure:"opcua"`
-	ExpMap    map[string]interface{} `mapstructure:"exporters"`
-	Exporters Exporters              `mapstructure:"exporters"`
+	Opcua    OpcConfig         `mapstructure:"opcua"`
+	Redpanda handlers.Redpanda `mapstructure:"redpanda"`
 }
 
 type OpcConfig struct {
@@ -50,12 +49,6 @@ type OpcCerts struct {
 	PrivateKeyPath  string `mapstructure:"private_key_path"`
 }
 
-type Exporters struct {
-	TimeScaleDB handlers.TimeScaleDB `mapstructure:"timescale-db"`
-	Websocket   handlers.Websocket   `mapstructure:"websocket"`
-	Mqtt        handlers.Mqtt        `mapstructure:"mqtt"`
-}
-
 type Nodeid struct {
 	Id   string          `mapstructure:"id"`
 	Meta []handlers.Meta `mapstructure:"meta"`
@@ -68,9 +61,9 @@ func LoadConfig() (*Configuration, error) {
 	v := viper.New()
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
-	v.AddConfigPath("/etc/gopclogs")   // Linux FS
-	v.AddConfigPath("$HOME/.gopclogs") // Windows FS
-	v.AddConfigPath("./configs")       // Local Testing
+	v.AddConfigPath("/etc/config")   // Linux FS
+	v.AddConfigPath("$HOME/.config") // Windows FS
+	v.AddConfigPath("./configs")     // Local Testing
 
 	if err := v.ReadInConfig(); err != nil {
 		return &conf, err
@@ -85,11 +78,3 @@ func LoadConfig() (*Configuration, error) {
 
 // Returns a map of all possible Exporters
 // To add a new Exporter add a new entry in format [`conf key name`]=Exporter struct
-
-func (e *Exporters) GetExporterRegister() map[string]handlers.Exporter {
-	exp := make(map[string]handlers.Exporter)
-	exp["timescale-db"] = &e.TimeScaleDB
-	exp["websocket"] = &e.Websocket
-	exp["mqtt"] = &e.Mqtt
-	return exp
-}

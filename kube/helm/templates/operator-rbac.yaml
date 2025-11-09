@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gualogger-sa
+  # Deployed in the correct namespace
+  namespace: {{ .Release.Namespace }}
+---
+# 3. The ClusterRole defining cluster-wide permissions (unchanged)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gualogger-manager
+  
+rules:
+  # Rule for the custom resource
+- apiGroups: ["doteich.com"]
+  resources: ["gualoggers", "gualoggers/status"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Rule for managing associated ConfigMaps
+- apiGroups: [""] # Core API group
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"] # Core API group
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# 4. The ClusterRoleBinding granting permissions to the ServiceAccount in the CORRECT namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gualogger-binding
+subjects:
+- kind: ServiceAccount
+  name: gualogger-sa
+  # THIS IS THE FIX: Point to the 'gualogger' namespace
+  namespace: gualogger
+roleRef:
+  kind: ClusterRole
+  name: gualogger-manager
+  apiGroup: rbac.authorization.k8s.io

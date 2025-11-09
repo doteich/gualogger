@@ -21,7 +21,7 @@ type Meta struct {
 }
 
 type Exporter interface {
-	Initialize(ctx context.Context, callback func(context.Context) []Payload) error
+	Initialize(ctx context.Context) error
 	Publish(ctx context.Context, p Payload) error
 	Shutdown(ctx context.Context) error
 }

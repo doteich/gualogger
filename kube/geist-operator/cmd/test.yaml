@@ -1,0 +1,34 @@
+apiVersion: doteich.com/v1alpha
+kind: GeistConnector
+metadata:
+  annotations:
+  name: my-geistconnector
+  namespace: geist
+spec:
+  logger:
+    connection:
+      authentication:
+        type: None
+      certificate:
+        auto_create: true
+      endpoint: 192.168.178.146
+      mode: SignAndEncrypt
+      policy: Basic256Sha256
+      port: 49320
+      retry_count: 10
+    subscription:
+      nodeids:
+      - id: ns=2;s=Machines.Packaging.Tag1
+        meta:
+        - key: name
+          value: Tag 1
+        - key: mqtt_topic
+          value: gualogger/tag1
+      - id: ns=2;s=Machines.Packaging.Tag2
+      sub_interval: 1
+    redpanda:
+      brokers:
+        - localhost:31092
+      topic: geist-topic
+      tls:
+        insecure_skip_verify: true # set to true to ignore self-signed certificates

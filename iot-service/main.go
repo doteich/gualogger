@@ -32,14 +32,14 @@ func init() {
 func main() {
 	ctx := context.Background()
 
-	mgr = NewManager(&conf.Exporters, &conf.ExpMap)
+	mgr = NewManager(&conf.Redpanda)
 
-	mgr.BuildMeta(conf.Opcua.Subscription.Nodeids)
-
-	if err := mgr.SetupPubHandlers(ctx); err != nil {
+	if err := mgr.SetupPubHandler(ctx); err != nil {
 		logging.Logger.Error(err.Error(), "func", "main")
 		return
 	}
+
+	go mgr.VerifyConnection(ctx)
 
 	conf.Opcua.InitSuperVisor(ctx)
 }

@@ -1,0 +1,9 @@
+apiVersion: geistconnectors.doteich.com/v1alpha
+kind: GeistConnector
+metadata:
+  labels:
+    app.kubernetes.io/name: geist-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: geistconnector-sample
+spec:
+  # TODO(user): Add fields here

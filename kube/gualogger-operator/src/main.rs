@@ -5,8 +5,17 @@ use kube::{
     api::Api,
     runtime::{Controller, controller::Action, watcher::Config},
 };
+use std::env;
 use std::sync::Arc;
 use tokio::time::Duration;
+use tracing::{error, info, warn};
+
+mod error;
+use error::Error as ReconcilerError;
+
+const REQUEUE_DURATION_FAST: Duration = Duration::from_secs(10);
+const REQUEUE_DURATION_SLOW: Duration = Duration::from_secs(60);
+const DEFAULT_NAME: &str = "default-name";
 
 mod configmap;
 mod crd;
@@ -19,6 +28,11 @@ mod webserver;
 struct Data {
     client: Client,
     //state: Arc<RwLock<State>>,
+}
+
+struct Environment {
+    web_server_port: String,
+    logger_image: String,
 }
 
 struct ImageData {
@@ -38,6 +52,7 @@ pub enum NextAction {
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
     let kclient = Client::try_default()
         .await
         .expect("Failed to create Kubernetes client");
@@ -60,16 +75,19 @@ async fn main() {
                 }
                 Err(reconciliation_err) => match reconciliation_err {
                     kube::runtime::controller::Error::ObjectNotFound(object_ref) => {
-                        println!("Object not found: {:?}", object_ref);
+                        warn!("Object not found: {:?}", object_ref);
                     }
-                    kube::runtime::controller::Error::ReconcilerFailed(_, object_ref) => {
-                        println!("Reconciler failed for object: {:?}", object_ref);
+                    kube::runtime::controller::Error::ReconcilerFailed(err, object_ref) => {
+                        error!(
+                            "Reconciler failed for object: {:?}, error: {}",
+                            object_ref, err
+                        );
                     }
-                    kube::runtime::controller::Error::QueueError(_) => {
-                        eprintln!("Queue error occurred during reconciliation.");
+                    kube::runtime::controller::Error::QueueError(err) => {
+                        error!("Queue error occurred during reconciliation: {}", err);
                     }
                     kube::runtime::controller::Error::RunnerError(error) => {
-                        eprintln!("Runner error: {:?}", error);
+                        error!("Runner error: {:?}", error);
                     }
                 },
             }
@@ -77,38 +95,31 @@ async fn main() {
         .await;
 }
 
-async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action, Error> {
+fn parse_env() -> Environment {
+    let port = env::var("WEBSERVER_PORT").unwrap_or("8080".to_owned());
+    let image = env::var("LOGGER_IMAGE_SOURCE").unwrap_or("doteich/geist-logger".to_owned());
+    let version = env::var("LOGGER_IMAGE_VERSION").unwrap_or("latest".to_owned());
+    
+}
+
+async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action, error::Error> {
     let client = &context.client;
 
     let source_namespace = logger.metadata.namespace.as_deref().unwrap_or("default");
 
-    let name: &str = logger.metadata.name.as_deref().unwrap_or("default-name");
+    let name: &str = logger.metadata.name.as_deref().unwrap_or(DEFAULT_NAME);
 
-    let kube_config = extract_kube_struct_from_logger(&logger.clone()).map_err(|e| {
-        Error::from(kube::Error::Api(kube::core::ErrorResponse {
-            status: "bad request".to_string(),
-            message: e.to_string(),
-            reason: "kube object is missing from spec".to_string(),
-            code: 404,
-        }))
-    })?;
+    let kube_config = extract_kube_struct_from_logger(&logger)?;
 
     let image = extract_image(kube_config.image);
-    let image_str = image.image + ":" + &image.version;
+    let image_str = format!("{}:{}", image.image, image.version);
 
-    let data = extract_data_from_logger(&logger).map_err(|e| {
-        Error::from(kube::Error::Api(kube::core::ErrorResponse {
-            status: "bad request".to_string(),
-            message: e.to_string(),
-            reason: "logger data is missing from spec".to_string(),
-            code: 404,
-        }))
-    })?;
+    let data = extract_data_from_logger(&logger)?;
 
     match determine_action(&logger, client, &kube_config.namespace).await {
         NextAction::Create => {
-            println!("Creating new resource: {:?}", name);
-            finalizer::add(client.clone(), name, source_namespace).await?;
+            info!("Creating new resource: {:?}", name);
+            finalizer::add(client, name, source_namespace).await?;
 
             configmap::create(client, &kube_config.namespace, name, &data).await?;
 
@@ -116,50 +127,50 @@ async fn reconciler(logger: Arc<GuaLogger>, context: Arc<Data>) -> Result<Action
 
             // Here you would typically create the resource, e.g., a deployment
             // For now, we just return a requeue action
-            return Ok(Action::requeue(Duration::from_secs(10)));
+            return Ok(Action::requeue(REQUEUE_DURATION_FAST));
         }
         NextAction::Update => {
-            println!("Updating existing resource: {:?}", name);
+            info!("Updating existing resource: {:?}", name);
             // Handle update logic here
-            return Ok(Action::requeue(Duration::from_secs(10)));
+            return Ok(Action::requeue(REQUEUE_DURATION_FAST));
         }
         NextAction::Delete => {
-            finalizer::remove(client.clone(), name, source_namespace).await?;
+            finalizer::remove(client, name, source_namespace).await?;
 
             configmap::delete(client, &kube_config.namespace, name).await?;
             deployment::delete(client, &kube_config.namespace, name).await?;
 
             // Handle deletion logic here
-            return Ok(Action::requeue(Duration::from_secs(10)));
+            return Ok(Action::requeue(REQUEUE_DURATION_FAST));
         }
         NextAction::RecreateConfigMap => {
-            println!("Recreating configmap for resource: {:?}", name);
+            info!("Recreating configmap for resource: {:?}", name);
 
             configmap::create(client, &kube_config.namespace, name, &data).await?;
-            return Ok(Action::requeue(Duration::from_secs(10)));
+            return Ok(Action::requeue(REQUEUE_DURATION_FAST));
         }
 
         NextAction::RecreateDeployment => {
-            println!("Recreating deployment for resource: {:?}", name);
+            info!("Recreating deployment for resource: {:?}", name);
 
             deployment::create(client, &kube_config.namespace, name, &image_str).await?;
-            return Ok(Action::requeue(Duration::from_secs(10)));
+            return Ok(Action::requeue(REQUEUE_DURATION_FAST));
         }
 
         NextAction::NoAction => {
-            println!("No action needed for resource: {:?}", logger.metadata.name);
+            //info!("No action needed for resource: {:?}", logger.metadata.name);
         }
     }
 
-    Ok(Action::requeue(Duration::from_secs(10)))
+    Ok(Action::await_change())
 }
 
-fn on_error(logger: Arc<GuaLogger>, error: &Error, _context: Arc<Data>) -> Action {
-    eprintln!(
+fn on_error(logger: Arc<GuaLogger>, error: &ReconcilerError, _context: Arc<Data>) -> Action {
+    error!(
         "Reconciliation error:\n{:?}.\n{:?}",
         error, logger.metadata.name
     );
-    Action::requeue(Duration::from_secs(60))
+    Action::requeue(REQUEUE_DURATION_SLOW)
 }
 
 async fn determine_action(logger: &GuaLogger, client: &Client, ns: &str) -> NextAction {
@@ -190,7 +201,7 @@ async fn determine_action(logger: &GuaLogger, client: &Client, ns: &str) -> Next
             }
         }
         Err(e) => {
-            eprintln!("Error verifying ConfigMap: {:?}", e);
+            error!("Error verifying ConfigMap: {:?}", e);
         }
     }
 
@@ -208,29 +219,29 @@ async fn determine_action(logger: &GuaLogger, client: &Client, ns: &str) -> Next
             }
         }
         Err(e) => {
-            eprintln!("Error verifying ConfigMap: {:?}", e);
+            error!("Error verifying ConfigMap: {:?}", e);
         }
     }
 
     NextAction::NoAction
 }
 
-fn extract_data_from_logger(logger: &GuaLogger) -> Result<String, Box<dyn std::error::Error>> {
+fn extract_data_from_logger(logger: &GuaLogger) -> Result<String, ReconcilerError> {
     if let Some(logger_data) = &logger.spec.logger {
         let yaml_raw = serde_yaml::to_string(logger_data)?;
         Ok(yaml_raw)
     } else {
-        Err("No logger data found in logger spec".into())
+        Err(ReconcilerError::MissingLoggerData)
     }
 }
 
 fn extract_kube_struct_from_logger(
     logger: &GuaLogger,
-) -> Result<crd::GuaLoggerKube, Box<dyn std::error::Error>> {
+) -> Result<crd::GuaLoggerKube, ReconcilerError> {
     if let Some(kube_struct) = &logger.spec.kube {
         Ok(kube_struct.clone())
     } else {
-        Err("No kube struct found in logger spec".into())
+        Err(ReconcilerError::MissingKubeObject)
     }
 }
 
@@ -256,10 +267,8 @@ fn extract_image(kube_str: Option<GuaLoggerKubeImage>) -> ImageData {
                 data.policy = policy
             }
 
-            return data;
+            data
         }
-        None => {
-            return data;
-        }
+        None => data,
     }
 }

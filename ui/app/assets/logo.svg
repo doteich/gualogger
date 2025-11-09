@@ -1,0 +1,30 @@
+<svg height="100px" width="100px" viewBox="0 0 3000 3000" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        .animated-logo-path {
+            /* Estimated path length. For precise animation, JS is needed to calculate this. */
+            stroke-dasharray: 8500;
+            stroke-dashoffset: 8500;
+            animation: draw-logo 3s ease-in-out infinite; /* Changed to infinite */
+            stroke: currentColor;
+            stroke-width: 30;
+            fill: transparent;
+        }
+
+        @keyframes draw-logo {
+            0% {
+                stroke-dashoffset: 8500;
+                fill: transparent;
+            }
+            80% {
+                fill: transparent;
+            }
+            100% {
+                stroke-dashoffset: 0;
+                fill: currentColor;
+            }
+        }
+    </style>
+    <path
+        class="animated-logo-path"
+        d="M61 733q0 367 214 554.5t622 187.5h778v-267h-755q-268 0 -396.5 -112.5t-128.5 -362.5q0 -238 113 -351.5t330 -123.5v569h917v-837h-899q-375 0 -585 187.5t-210 555.5zM1145 256h282v305h-282v-305z" />
+</svg>

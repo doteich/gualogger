@@ -1,0 +1,9 @@
+dependencies:
+- name: operator
+  repository: https://charts.redpanda.com
+  version: 25.1.3
+- name: questdb
+  repository: https://helm.questdb.io
+  version: 1.0.11
+digest: sha256:c2dd2126cbdd771cbcb6fa7293af0f7959d257d3b7671f8a4e5021e4c3adb5bc
+generated: "2025-10-05T11:18:45.5355307+02:00"

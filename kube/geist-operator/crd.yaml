@@ -1,0 +1,148 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: geistconnectors.config.geist-iot.com
+spec:
+  group: config.geist-iot.com
+  names:
+    plural: geistconnectors
+    singular: geistconnector
+    kind: GeistConnector
+    shortNames:
+      - gc
+  scope: Namespaced
+  versions:
+    - name: v1alpha
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                connectorSpec: # Application Configuration
+                  type: object
+                  description: "Spec for OPC UA and Redpanda application configuration."
+                  properties:
+                    opcua: # OPCUA specific config
+                      type: object
+                      properties:
+                        connection:
+                          type: object
+                          properties:
+                            endpoint:
+                              type: string
+                              description: "OPC UA Server endpoint address."
+                            port:
+                              type: integer
+                              description: "OPC UA Server port."
+                            mode:
+                              type: string
+                              enum: ["None", "Sign", "SignAndEncrypt"]
+                            policy:
+                              type: string
+                              enum: ["None", "Basic256", "Basic256Sha256", "Aes256Sha256RsaPss", "Aes128Sha256RsaOaep"]
+                            authentication:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                  enum: ["None", "User&Password", "Certificate"]
+                                credentials:
+                                  type: object
+                                  properties:
+                                    username:
+                                      type: string
+                                    password:
+                                      type: string
+                                certificate:
+                                  type: object
+                                  properties:
+                                    certificate_path:
+                                      type: string
+                                    private_key_path:
+                                      type: string
+                            certificate:
+                              type: object
+                              properties:
+                                auto_create:
+                                  type: boolean
+                                certificate_path:
+                                  type: string
+                                private_key_path:
+                                  type: string
+                            retry_count:
+                              type: integer
+                              format: int32
+                        subscription:
+                          type: object
+                          properties:
+                            sub_interval:
+                              type: integer
+                              format: int32
+                            nodeids:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                    redpanda: # Redpanda specific config
+                      type: object
+                      properties:
+                        brokers:
+                          type: array
+                          items:
+                            type: string
+                        topic:
+                          type: string
+                        auth:
+                          type: object
+                          properties:
+                            sasl:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                  enum: ["plain", "scram-sha-256", "scram-sha-512"]
+                                user:
+                                  type: string
+                                password:
+                                  type: string
+                        tls:
+                          type: object
+                          properties:
+                            insecure_skip_verify:
+                              type: boolean
+                  required: # opcua and redpanda are now siblings
+                    - opcua
+                    - redpanda
+                deploymentSpec: # Kubernetes-specific configuration
+                  type: object
+                  description: "Spec for Kubernetes deployment configuration."
+                  properties:
+                    imageRepo:
+                      type: string
+                      description: "The container image repository (e.g., myregistry/collector)."
+                    imageVersion:
+                      type: string
+                      description: "The container image version/tag (e.g., v1.0.0)."
+                    pullPolicy:
+                      type: string
+                      enum: ["Always", "IfNotPresent", "Never"]
+                      description: "The image pull policy."
+                    customAnnotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: "Map of custom annotations to add to the Deployment/Pod."
+                    customLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: "Map of custom labels to add to the Deployment/Pod."
+              required:
+                - opcuaSpec
+

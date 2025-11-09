@@ -37,10 +37,10 @@ pub async fn create(client: kube::Client) {
         .route("/api/resources", get(fetch_deployments))
         .with_state(client);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await
         .unwrap();
-    println!("server created");
+
 
     match axum::serve(listener, router).await {
         Ok(_) => (),

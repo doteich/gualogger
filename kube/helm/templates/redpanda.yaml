@@ -1,0 +1,21 @@
+apiVersion: cluster.redpanda.com/v1alpha2
+kind: Redpanda
+metadata:
+  name: redpanda
+  namespace: geist
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  clusterSpec:
+    external:
+      enabled: true
+      domain: localhost
+      type: NodePort
+    statefulset:
+      replicas: 1
+      initContainers:
+        setDataDirOwnership:
+          enabled: false
+    enterprise: null

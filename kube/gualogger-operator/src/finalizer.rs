@@ -9,13 +9,13 @@ use kube::{
 use kube::error::ErrorResponse;
 use serde_json::{Value, json};
 
-pub async fn add(client: Client, name: &str, namespace: &str) -> Result<(), kube::Error> {
+pub async fn add(client: &Client, name: &str, namespace: &str) -> Result<(), kube::Error> {
     // ToDo:
     // Fetch specific CRD GuaLogger
     // Add finalizer to the GuaLogger CRD by patching it
     // See https://github.com/Pscheidl/rust-kubernetes-operator-example/blob/master/src/finalizer.rs
 
-    let loggers: Api<GuaLogger> = Api::namespaced(client, namespace);
+    let loggers: Api<GuaLogger> = Api::namespaced(client.clone(), namespace);
 
     let finalizer: Value = json!({
         "metadata": {
@@ -43,8 +43,8 @@ pub async fn add(client: Client, name: &str, namespace: &str) -> Result<(), kube
     Ok(())
 }
 
-pub async fn remove(client: Client, name: &str, namespace: &str) -> Result<(), kube::Error> {
-    let loggers: Api<GuaLogger> = Api::namespaced(client, namespace);
+pub async fn remove(client: &Client, name: &str, namespace: &str) -> Result<(), kube::Error> {
+    let loggers: Api<GuaLogger> = Api::namespaced(client.clone(), namespace);
 
     let finalizer: Value = json!({
         "metadata": {

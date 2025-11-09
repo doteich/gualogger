@@ -190,7 +190,7 @@ func CreateSubscription(pctx context.Context, ctx context.Context, m *monitor.No
 				} else {
 					p := handlers.Payload{Value: dcm.Value.Value(), TS: dcm.SourceTimestamp, Name: dcm.NodeID.StringID(), Id: dcm.NodeID.String(), Datatype: dt}
 
-					mgr.Publish(ctx, p)
+					go mgr.Publish(ctx, p)
 
 				}
 
@@ -265,47 +265,46 @@ func DeferDatatype(i interface{}) string {
 		dt = "Str"
 
 	}
-
 	return dt
 }
 
-func Read(ctx context.Context) []handlers.Payload {
+// func Read(ctx context.Context) []handlers.Payload {
 
-	pay := make([]handlers.Payload, 0)
-	nodes := make([]*ua.ReadValueID, 0)
+// 	pay := make([]handlers.Payload, 0)
+// 	nodes := make([]*ua.ReadValueID, 0)
 
-	if !con_active {
-		return pay
-	}
+// 	if !con_active {
+// 		return pay
+// 	}
 
-	for _, n := range conf.Opcua.Subscription.Nodeids {
+// 	for _, n := range conf.Opcua.Subscription.Nodeids {
 
-		id, err := ua.ParseNodeID(n.Id)
+// 		id, err := ua.ParseNodeID(n.Id)
 
-		if err != nil {
-			logging.Logger.Error(fmt.Sprintf("error parsing node id while reading:%s", err.Error()), "func", "read")
-			continue
-		}
+// 		if err != nil {
+// 			logging.Logger.Error(fmt.Sprintf("error parsing node id while reading:%s", err.Error()), "func", "read")
+// 			continue
+// 		}
 
-		nodes = append(nodes, &ua.ReadValueID{NodeID: id})
-	}
+// 		nodes = append(nodes, &ua.ReadValueID{NodeID: id})
+// 	}
 
-	res, err := current_client.Read(ctx, &ua.ReadRequest{NodesToRead: nodes})
+// 	res, err := current_client.Read(ctx, &ua.ReadRequest{NodesToRead: nodes})
 
-	if err != nil {
-		logging.Logger.Error(fmt.Sprintf("error occured during opc ua read request:%s", err.Error()), "func", "read")
-		return pay
-	}
+// 	if err != nil {
+// 		logging.Logger.Error(fmt.Sprintf("error occured during opc ua read request:%s", err.Error()), "func", "read")
+// 		return pay
+// 	}
 
-	for _, r := range res.Results {
-		dt := DeferDatatype(r.Value.Value())
+// 	for _, r := range res.Results {
+// 		dt := DeferDatatype(r.Value.Value())
 
-		p := handlers.Payload{Value: r.Value.Value(), TS: r.SourceTimestamp, Name: "", Id: "", Datatype: dt}
+// 		p := handlers.Payload{Value: r.Value.Value(), TS: r.SourceTimestamp, Name: "", Id: "", Datatype: dt}
 
-		pay = append(pay, p)
+// 		pay = append(pay, p)
 
-	}
+// 	}
 
-	return pay
+// 	return pay
 
-}
+// }
